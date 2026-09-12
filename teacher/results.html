@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enter Exam Results | Teacher Portal</title>
+    <meta name="description" content="Enter end-of-term exam results for your students">
+    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="../css/teacher-portal.css">
+    <style>
+        /* Score input table */
+        .score-table { width: 100%; border-collapse: collapse; }
+        .score-table th { padding: 0.75rem 1rem; text-align: left; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+        .score-table td { padding: 0.5rem 0.75rem; vertical-align: middle; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+        .score-input {
+            width: 80px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: var(--radius-md);
+            padding: 0.4rem 0.6rem;
+            font-size: 0.875rem;
+            text-align: center;
+            transition: var(--transition);
+        }
+        .score-input:focus { outline: none; border-color: var(--accent-primary); background: rgba(59,130,246,0.08); }
+        .score-input.out-of-range { border-color: #f87171; background: rgba(239,68,68,0.1); color: #f87171; }
+
+        .live-total {
+            font-weight: 700;
+            font-size: 1rem;
+            min-width: 50px;
+            text-align: center;
+        }
+        .grade-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            min-width: 32px;
+            text-align: center;
+        }
+        .grade-A { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+        .grade-B { background: rgba(59,130,246,0.2); color: #93c5fd; }
+        .grade-C { background: rgba(245,158,11,0.2); color: #fcd34d; }
+        .grade-D { background: rgba(249,115,22,0.2); color: #fdba74; }
+        .grade-E { background: rgba(168,85,247,0.2); color: #d8b4fe; }
+        .grade-F { background: rgba(239,68,68,0.2); color: #f87171; }
+
+        .weight-tag { font-size: 0.65rem; color: var(--text-muted); display: block; margin-top: 2px; }
+        .filter-select { appearance: none; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-md); padding: 0.5rem 1rem; font-size: 0.875rem; cursor: pointer; outline: none; }
+        .filter-select:focus { border-color: var(--accent-primary); }
+
+        .scoring-legend { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--text-muted); }
+        .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+    </style>
+</head>
+<body class="dashboard-layout">
+    <div class="sidebar-overlay"></div>
+    <aside class="sidebar flex-col">
+        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Teacher<br><span class="text-primary text-sm">Portal</span></h2>
+        <nav class="flex-col w-full h-full">
+            <a href="dashboard.html" class="nav-link">Dashboard Summary</a>
+            <a href="timetable.html" class="nav-link">My Timetable</a>
+            <a href="attendance.html" class="nav-link">Class Attendance</a>
+            <a href="morning-attendance.html" class="nav-link" id="morningAttendanceTab" style="display:none;">Morning Attendance</a>
+            <a href="assignments.html" class="nav-link">Assignments</a>
+            <a href="results.html" class="nav-link active">Exam Results</a>
+            <div style="margin-top: auto;">
+                <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">Logout</button>
+            </div>
+        </nav>
+    </aside>
+
+    <main>
+        <div class="mobile-top-bar">
+            <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+            <span class="font-bold">Exam Results</span>
+            <div style="width:24px;"></div>
+        </div>
+
+        <div class="p-8">
+            <header class="mb-8">
+                <h1 class="text-2xl">End-of-Term Results</h1>
+                <p class="text-muted">Enter scores for each student. Totals are calculated automatically using the weighted formula below.</p>
+            </header>
+
+            <!-- Step 1: Configure -->
+            <section class="max-w-5xl">
+                <div class="glass-panel p-6 animate-fade-in mb-6">
+                    <h2 class="mb-5">Step 1 — Select Class, Subject &amp; Term</h2>
+                    <form id="configForm" class="flex gap-4 flex-wrap items-end">
+                        <div class="form-group mb-0" style="min-width:160px; flex:1;">
+                            <label class="form-label">Class</label>
+                            <select id="classSelector" class="filter-select w-full" required>
+                                <option value="">-- Select Class --</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-0" style="min-width:160px; flex:1;">
+                            <label class="form-label">Subject</label>
+                            <select id="subjectSelector" class="filter-select w-full" required>
+                                <option value="">-- Select Subject --</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-0" style="min-width:140px; flex:1;">
+                            <label class="form-label">Term</label>
+                            <select id="termSelector" class="filter-select w-full" required>
+                                <option value="First Term">First Term</option>
+                                <option value="Second Term">Second Term</option>
+                                <option value="Third Term">Third Term</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-0" style="min-width:140px; flex:1;">
+                            <label class="form-label">Academic Year</label>
+                            <input type="text" id="academicYear" class="filter-select w-full" placeholder="e.g. 2025/2026" required style="font-size:0.875rem;">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="white-space:nowrap;">Load Students</button>
+                    </form>
+                </div>
+
+                <!-- Scoring formula legend -->
+                <div class="glass-panel p-4 mb-6 animate-fade-in delay-100" style="background: rgba(59,130,246,0.05); border-color: rgba(59,130,246,0.2);">
+                    <div class="flex justify-between items-center flex-wrap gap-3">
+                        <span class="text-sm font-medium" style="color: #93c5fd;">📐 Weighted Scoring Formula</span>
+                        <div class="scoring-legend">
+                            <div class="legend-item"><div class="legend-dot" style="background:#6ee7b7;"></div>End of Term Exam <strong class="text-primary ml-1">×60%</strong></div>
+                            <div class="legend-item"><div class="legend-dot" style="background:#c4b5fd;"></div>Project Work <strong class="text-primary ml-1">×10%</strong></div>
+                            <div class="legend-item"><div class="legend-dot" style="background:#fcd34d;"></div>Group Work <strong class="text-primary ml-1">×10%</strong></div>
+                            <div class="legend-item"><div class="legend-dot" style="background:#fdba74;"></div>Assignments <strong class="text-primary ml-1">×20%</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Score Entry Table -->
+                <div class="glass-panel p-6 animate-fade-in delay-200" id="scoreSection" style="display:none;">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 id="scoreTitle">Results Entry</h2>
+                            <p class="text-muted text-sm" id="scoreSubtitle"></p>
+                        </div>
+                        <div class="flex gap-3">
+                            <button class="btn btn-outline" style="padding:0.4rem 1rem; font-size:0.8rem;" onclick="fillAll100()">Fill 100 (All)</button>
+                            <button class="btn btn-primary" id="submitResultsBtn" onclick="submitResults()">💾 Save All Results</button>
+                        </div>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table class="score-table">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Exam Score<span class="weight-tag">/ 100 · Weight 60%</span></th>
+                                    <th>Project Work<span class="weight-tag">/ 100 · Weight 10%</span></th>
+                                    <th>Group Work<span class="weight-tag">/ 100 · Weight 10%</span></th>
+                                    <th>Assignments<span class="weight-tag">/ 100 · Weight 20%</span></th>
+                                    <th style="text-align:center;">Total<span class="weight-tag">/ 100</span></th>
+                                    <th style="text-align:center;">Grade</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scoreTableBody">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex justify-end mt-6">
+                        <button class="btn btn-primary" id="submitResultsBtn2" onclick="submitResults()">💾 Save All Results</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        Auth.requireAuth(['teacher']);
+        const user = Auth.getCurrentUser();
+
+        if (user.assignedClass) {
+            document.getElementById('morningAttendanceTab').style.display = 'flex';
+        }
+
+        // Default academic year
+        const now = new Date();
+        const yr = now.getFullYear();
+        document.getElementById('academicYear').value = `${yr}/${yr + 1}`;
+
+        // Prefill selectors
+        document.addEventListener('DOMContentLoaded', async () => {
+            const subjects = Array.isArray(user.subjects) ? user.subjects : (user.subjects||'').split(',').map(s => s.trim());
+            const subSel = document.getElementById('subjectSelector');
+            subjects.forEach(s => {
+                const o = document.createElement('option'); o.value = s; o.textContent = s; subSel.appendChild(o);
+            });
+
+            try {
+                const res = await ApiClient.request('teacher.php', { action: 'get_classes' });
+                const clsSel = document.getElementById('classSelector');
+                res.data.forEach(c => {
+                    const o = document.createElement('option'); o.value = c; o.textContent = c; clsSel.appendChild(o);
+                });
+            } catch(e) {}
+        });
+
+        let currentConfig = {};
+        let studentRows = [];
+
+        // ── Step 1: Load Students ───────────────────────────────────────────
+        document.getElementById('configForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true; btn.textContent = 'Loading...';
+
+            currentConfig = {
+                className:     document.getElementById('classSelector').value,
+                subject:       document.getElementById('subjectSelector').value,
+                term:          document.getElementById('termSelector').value,
+                academic_year: document.getElementById('academicYear').value,
+            };
+
+            try {
+                // Fetch roster
+                const rosterRes = await ApiClient.request('teacher.php', {
+                    action: 'get_roster', className: currentConfig.className
+                });
+
+                // Fetch existing results to pre-fill
+                const existingRes = await ApiClient.request('results.php', {
+                    action:        'get_class_results',
+                    className:     currentConfig.className,
+                    subject:       currentConfig.subject,
+                    term:          currentConfig.term,
+                    academic_year: currentConfig.academic_year,
+                });
+
+                const existingMap = {};
+                (existingRes.data || []).forEach(r => { existingMap[r.student_id] = r; });
+
+                studentRows = rosterRes.data;
+                renderScoreTable(studentRows, existingMap);
+
+                document.getElementById('scoreTitle').textContent = `${currentConfig.subject} — ${currentConfig.term} ${currentConfig.academic_year}`;
+                document.getElementById('scoreSubtitle').textContent = `Class: ${currentConfig.className} · ${studentRows.length} student(s)`;
+                document.getElementById('scoreSection').style.display = 'block';
+                document.getElementById('scoreSection').scrollIntoView({ behavior: 'smooth' });
+
+            } catch(err) {
+                showToast('Failed to load students.', 'error');
+            }
+
+            btn.disabled = false; btn.textContent = 'Load Students';
+        });
+
+        // ── Render Score Table ──────────────────────────────────────────────
+        function renderScoreTable(students, existingMap = {}) {
+            const tbody = document.getElementById('scoreTableBody');
+            tbody.innerHTML = '';
+
+            if (students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-muted">No students found in this class.</td></tr>';
+                return;
+            }
+
+            students.forEach(stu => {
+                const ex = existingMap[stu.id] || {};
+                const tr = document.createElement('tr');
+                tr.dataset.studentId = stu.id;
+                tr.innerHTML = `
+                    <td class="font-medium" style="min-width:140px;">${stu.name}<br><span class="text-xs text-muted">${stu.id}</span></td>
+                    <td><input type="number" class="score-input" data-field="exam"   min="0" max="100" step="0.5" value="${ex.exam_score ?? ''}" oninput="recalcRow(this)"></td>
+                    <td><input type="number" class="score-input" data-field="project" min="0" max="100" step="0.5" value="${ex.project_score ?? ''}" oninput="recalcRow(this)"></td>
+                    <td><input type="number" class="score-input" data-field="group"   min="0" max="100" step="0.5" value="${ex.group_score ?? ''}" oninput="recalcRow(this)"></td>
+                    <td><input type="number" class="score-input" data-field="assign"  min="0" max="100" step="0.5" value="${ex.assignment_score ?? ''}" oninput="recalcRow(this)"></td>
+                    <td><span class="live-total" id="total-${stu.id}">${ex.total_score ? parseFloat(ex.total_score).toFixed(1) : '—'}</span></td>
+                    <td style="text-align:center;"><span class="grade-badge ${ex.grade ? 'grade-'+ex.grade : ''}" id="grade-${stu.id}">${ex.grade || '—'}</span></td>
+                `;
+                tbody.appendChild(tr);
+                // trigger initial calc
+                if (ex.exam_score !== undefined) recalcRow(tr.querySelector('[data-field="exam"]'));
+            });
+        }
+
+        // ── Live Row Recalculation ──────────────────────────────────────────
+        window.recalcRow = function(input) {
+            const tr = input.closest('tr');
+            const sid = tr.dataset.studentId;
+
+            const exam   = parseFloat(tr.querySelector('[data-field="exam"]').value)   || 0;
+            const proj   = parseFloat(tr.querySelector('[data-field="project"]').value) || 0;
+            const grp    = parseFloat(tr.querySelector('[data-field="group"]').value)   || 0;
+            const assign = parseFloat(tr.querySelector('[data-field="assign"]').value)  || 0;
+
+            // Validate ranges
+            [exam, proj, grp, assign].forEach((val, i) => {
+                const inp = tr.querySelectorAll('.score-input')[i];
+                inp.classList.toggle('out-of-range', val > 100 || val < 0);
+            });
+
+            const total = (exam * 0.6) + (proj * 0.1) + (grp * 0.1) + (assign * 0.2);
+            const grade = getGrade(total);
+
+            const totalEl = document.getElementById('total-' + sid);
+            const gradeEl = document.getElementById('grade-' + sid);
+
+            const hasValues = [exam, proj, grp, assign].some(v => v > 0);
+            totalEl.textContent = hasValues ? total.toFixed(1) : '—';
+            totalEl.style.color = hasValues ? getGradeColor(grade) : '';
+
+            gradeEl.textContent = hasValues ? grade : '—';
+            gradeEl.className = 'grade-badge' + (hasValues ? ' grade-' + grade : '');
+        };
+
+        function getGrade(total) {
+            if (total >= 80) return 'A';
+            if (total >= 70) return 'B';
+            if (total >= 60) return 'C';
+            if (total >= 50) return 'D';
+            if (total >= 40) return 'E';
+            return 'F';
+        }
+        function getGradeColor(g) {
+            return { A:'#6ee7b7', B:'#93c5fd', C:'#fcd34d', D:'#fdba74', E:'#d8b4fe', F:'#f87171' }[g] || '';
+        }
+
+        window.fillAll100 = function() {
+            document.querySelectorAll('.score-input').forEach(inp => {
+                inp.value = 100;
+                recalcRow(inp);
+            });
+        };
+
+        // ── Submit Results ──────────────────────────────────────────────────
+        window.submitResults = async function() {
+            const btn = document.getElementById('submitResultsBtn');
+            btn.disabled = true; btn.textContent = 'Saving...';
+
+            const rows = document.querySelectorAll('#scoreTableBody tr[data-student-id]');
+            const records = [];
+
+            let hasError = false;
+            let numValid = 0;
+            
+            rows.forEach(tr => {
+                const sid = tr.dataset.studentId;
+                const inputs = tr.querySelectorAll('.score-input');
+                
+                // Use 0 if the field is empty, but still check if it's a valid number between 0-100
+                const exam   = parseFloat(inputs[0].value) || 0;
+                const proj   = parseFloat(inputs[1].value) || 0;
+                const grp    = parseFloat(inputs[2].value) || 0;
+                const assign = parseFloat(inputs[3].value) || 0;
+
+                if ([exam, proj, grp, assign].some(v => v < 0 || v > 100)) {
+                    hasError = true;
+                }
+                
+                records.push({ 
+                    student_id: sid, 
+                    exam_score: exam, 
+                    project_score: proj, 
+                    group_score: grp, 
+                    assignment_score: assign 
+                });
+                numValid++;
+            });
+
+            if (hasError) {
+                showToast('Some scores are out of range (0–100). Please fix them.', 'error');
+                btn.disabled = false; btn.textContent = '💾 Save All Results';
+                return;
+            }
+            
+            if (records.length === 0) {
+                showToast('No data to save.', 'error');
+                btn.disabled = false; btn.textContent = '💾 Save All Results';
+                return;
+            }
+
+            try {
+                const res = await ApiClient.request('results.php', {
+                    action:        'submit_results',
+                    teacherId:     user.id,
+                    subject:       currentConfig.subject,
+                    term:          currentConfig.term,
+                    academic_year: currentConfig.academic_year,
+                    records
+                });
+                showToast(`✅ ${res.saved} results saved successfully!`, 'success');
+            } catch(err) {
+                // Error toast already handled by ApiClient
+            }
+
+            btn.disabled = false; btn.textContent = '💾 Save All Results';
+            document.getElementById('submitResultsBtn2').disabled = false;
+        };
+    </script>
+</body>
+</html>

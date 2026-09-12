@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morning Attendance | Teacher Portal</title>
+    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="../css/teacher-portal.css">
+</head>
+<body class="dashboard-layout">
+    <div class="sidebar-overlay"></div>
+    <aside class="sidebar flex-col">
+        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Teacher<br><span class="text-primary text-sm">Portal</span></h2>
+        <nav class="flex-col w-full h-full">
+            <a href="dashboard.html" class="nav-link">Dashboard Summary</a>
+            <a href="timetable.html" class="nav-link">My Timetable</a>
+            <a href="attendance.html" class="nav-link">Class Attendance</a>
+            <a href="morning-attendance.html" class="nav-link active" id="morningAttendanceTab">Morning Attendance</a>
+            <a href="assignments.html" class="nav-link">Assignments</a>
+            <a href="results.html" class="nav-link">Exam Results</a>
+            <div style="margin-top: auto;">
+                <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">Logout</button>
+            </div>
+        </nav>
+    </aside>
+
+    <main>
+        <div class="mobile-top-bar">
+            <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+            <span class="font-bold">Morning Reg.</span>
+            <div style="width:24px;"></div>
+        </div>
+
+        <div class="p-8">
+            <header class="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl">Morning Registration</h1>
+                    <p class="text-muted">Log student arrivals. <span class="text-success font-medium">Auto-SMS notification will be sent to parents instantly.</span></p>
+                </div>
+                <div class="glass-panel px-4 py-2" style="border-radius: var(--radius-md);">
+                    <span class="text-sm">Assigned Class: <strong id="assignedClassDisplay" class="text-primary"></strong></span>
+                </div>
+            </header>
+
+            <section class="max-w-4xl">
+                <!-- Roster Form -->
+                <div class="glass-panel p-6 animate-fade-in" id="rosterContainer">
+                    <form id="morningAttendanceForm">
+                        <div style="overflow-x: auto; max-height: 60vh;" class="mb-6">
+                            <table class="w-full text-left" style="border-collapse: collapse;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--bg-glass); z-index: 10;">
+                                        <th class="p-4 text-muted font-medium">Arrival Time</th>
+                                        <th class="p-4 text-muted font-medium">Student Name</th>
+                                        <th class="p-4 text-muted font-medium text-center">Status</th>
+                                        <th class="p-4 text-muted font-medium text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rosterBody">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        Auth.requireAuth(['teacher']);
+        
+        const user = Auth.getCurrentUser();
+        
+        if (!user.assignedClass) {
+            // Kick them out if not a form teacher
+            window.location.href = 'dashboard.html';
+        }
+
+        document.getElementById('assignedClassDisplay').textContent = user.assignedClass;
+
+        async function renderMorningRoster() {
+            const tbody = document.getElementById('rosterBody');
+            
+            try {
+                const res = await ApiClient.request('teacher.php', {
+                    action: 'get_morning_roster',
+                    className: user.assignedClass
+                });
+                
+                const students = res.data;
+                tbody.innerHTML = '';
+                
+                if(students.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-muted">No students registered in this class.</td></tr>';
+                } else {
+                    students.forEach(stu => {
+                        const tr = document.createElement('tr');
+                        tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                        
+                        if (stu.arrival_time) {
+                            const timeStr = new Date(stu.arrival_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                            tr.innerHTML = `
+                                <td class="p-4 text-sm text-secondary">${timeStr}</td>
+                                <td class="p-4 text-primary font-medium">${stu.name}</td>
+                                <td class="p-4 text-center"><span class="text-xs px-2 py-1 rounded bg-success text-white" style="background: rgba(16,185,129,0.2); color: #6ee7b7;">Arrived</span></td>
+                                <td class="p-4 text-right"><button disabled class="btn btn-outline" style="opacity:0.5; cursor:not-allowed; padding: 0.25rem 0.75rem; font-size: 0.75rem;">Done</button></td>
+                            `;
+                        } else {
+                            tr.innerHTML = `
+                                <td class="p-4 text-sm text-muted">--:--</td>
+                                <td class="p-4 font-medium">${stu.name}</td>
+                                <td class="p-4 text-center"><span class="text-xs px-2 py-1 rounded bg-secondary text-muted" style="background: rgba(255,255,255,0.1);">Pending</span></td>
+                                <td class="p-4 text-right"><button type="button" onclick="markArrived('${stu.id}', '${stu.name.replace("'", "\\'")}')" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">Check In</button></td>
+                            `;
+                        }
+                        
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (err) {}
+        }
+
+        window.markArrived = async function(studentId, studentName) {
+            try {
+                const res = await ApiClient.request('teacher.php', {
+                    action: 'submit_morning_attendance',
+                    teacherId: user.id,
+                    studentId: studentId
+                });
+
+                if(res.parentPhone) {
+                    // UI Mock for SMS
+                    showToast(`[SMS Gateway Mock] Notification sent to ${res.parentPhone} for ${studentName}'s arrival.`, 'success');
+                } else {
+                    showToast(`Checked in ${studentName}, but no valid parent phone found to SMS.`, 'warning');
+                }
+
+                renderMorningRoster();
+            } catch (err) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', renderMorningRoster);
+    </script>
+</body>
+</html>

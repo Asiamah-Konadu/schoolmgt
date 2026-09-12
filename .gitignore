@@ -1,0 +1,11 @@
+# IDE and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Archives & Temporary files
+*.zip
+*.tar.gz
+*.rar
+.sixth/

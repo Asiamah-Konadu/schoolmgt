@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promotion Management | School System</title>
+    <link rel="stylesheet" href="../css/index.css">
+    <style>
+        .dashboard-layout { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; font-size: small; }
+        .sidebar { background: var(--bg-glass); border-right: 1px solid var(--border-color); padding: 2rem 1rem; }
+        .nav-link { display: flex; align-items: center; padding: 0.75rem 1rem; color: var(--text-secondary); border-radius: var(--radius-md); margin-bottom: 0.5rem; transition: var(--transition); }
+        .nav-link:hover, .nav-link.active { background: var(--accent-glow); color: var(--text-primary); }
+    </style>
+</head>
+<body class="dashboard-layout">
+    <aside class="sidebar flex-col">
+        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Management<br><span class="text-primary text-sm">Portal</span></h2>
+        <nav class="flex-col w-full h-full"></nav>
+    </aside>
+
+    <main class="p-8">
+        <header class="mb-8">
+            <h1 class="text-2xl">Promotion Management</h1>
+            <p class="text-muted">Review and approve student promotions recommended by class teachers.</p>
+        </header>
+
+        <section class="max-w-5xl">
+            <div class="glass-panel p-6 animate-fade-in">
+                <div style="overflow-x: auto;">
+                    <table class="w-full text-left" style="border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <th class="p-4 text-muted font-medium">Student Name</th>
+                                <th class="p-4 text-muted font-medium">Current Class</th>
+                                <th class="p-4 text-muted font-medium">Next Potential Class</th>
+                                <th class="p-4 text-muted font-medium text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="promotionTableBody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/management-nav.js"></script>
+    <script>
+        Auth.requireAuth(['management']);
+        renderManagementSidebar();
+
+        const classSequence = [
+            'Nursery 1', 'Nursery 2', 'KG 1', 'KG 2', 
+            'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 
+            'JHS 1', 'JHS 2', 'JHS 3'
+        ];
+
+        async function loadRecommended() {
+            const tbody = document.getElementById('promotionTableBody');
+            try {
+                const res = await ApiClient.request('management.php', { action: 'get_recommended_promotions' });
+                tbody.innerHTML = '';
+                
+                if(res.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-muted">No pending promotion recommendations.</td></tr>';
+                    return;
+                }
+
+                res.data.forEach(item => {
+                    const currentIndex = classSequence.indexOf(item.class);
+                    const nextClass = (currentIndex !== -1 && currentIndex < classSequence.length - 1) ? classSequence[currentIndex + 1] : 'Graduated';
+                    
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                    tr.innerHTML = `
+                        <td class="p-4 font-medium text-primary">${item.name}</td>
+                        <td class="p-4"><span class="px-2 py-1 bg-secondary rounded text-xs">${item.class}</span></td>
+                        <td class="p-4"><span class="px-2 py-1 bg-success rounded text-xs" style="background: rgba(16,185,129,0.1); color: #6ee7b7;">${nextClass}</span></td>
+                        <td class="p-4 text-right">
+                            <button onclick="approvePromotion('${item.id}', '${item.name.replace(/'/g, "\\'")}', '${nextClass}')" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">Approve & Promote</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {}
+        }
+
+        window.approvePromotion = async function(id, name, nextClass) {
+            if(!confirm(`Promote ${name} to ${nextClass}? This action is permanent.`)) return;
+
+            try {
+                await ApiClient.request('management.php', {
+                    action: 'approve_promotion',
+                    studentId: id
+                });
+                showToast(`${name} has been promoted to ${nextClass}.`, 'success');
+                loadRecommended();
+            } catch (err) {
+                showToast('Failed to approve promotion.', 'error');
+            }
+        }
+
+        loadRecommended();
+    </script>
+</body>
+</html>
+

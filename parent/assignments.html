@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Assignments | Parent Portal</title>
+    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="../css/parent-portal.css">
+</head>
+<body class="dashboard-layout">
+    <div class="sidebar-overlay"></div>
+    <aside class="sidebar flex-col">
+        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Parent<br><span class="text-primary text-sm">Portal</span></h2>
+        <nav class="flex-col w-full h-full">
+            <a href="dashboard.html" class="nav-link">Dashboard Overview</a>
+            <a href="finance.html" class="nav-link">Fee Statement</a>
+            <a href="attendance.html" class="nav-link">Attendance Records</a>
+            <a href="timetable.html" class="nav-link">Student Timetable</a>
+            <a href="assignments.html" class="nav-link active">Assignments</a>
+            <a href="results.html" class="nav-link">Term Results</a>
+            <div style="margin-top: auto;">
+                <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">Logout</button>
+            </div>
+        </nav>
+    </aside>
+
+    <main>
+        <div class="mobile-top-bar">
+            <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+            <span class="font-bold">Assignments</span>
+            <div style="width:24px;"></div>
+        </div>
+
+        <div class="p-8">
+            <header class="mb-8">
+                <h1 class="text-2xl">Academic Assignments</h1>
+                <p class="text-muted">Monitor tasks and submissions deadlines. <span class="text-sm font-normal ml-2" id="studentNameContext"></span></p>
+            </header>
+
+            <section class="max-w-6xl summary-grid">
+                <!-- Active Assignments -->
+                <div class="card card-2 glass-panel p-6 animate-fade-in" style="max-height: 80vh; overflow-y: auto;">
+                    <h2 class="mb-6 flex justify-between items-center">
+                        Pending Tasks
+                        <span class="text-xs px-2 py-1 bg-danger rounded-full text-white" id="pendingCount">0</span>
+                    </h2>
+                    <div id="activeList" class="flex-col gap-4"></div>
+                </div>
+
+                <!-- Past Assignments -->
+                <div class="card card-1 glass-panel p-6 animate-fade-in delay-100" style="max-height: 80vh; overflow-y: auto;">
+                    <h2 class="mb-6">Past Due</h2>
+                    <div id="pastList" class="flex-col gap-4"></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        Auth.requireAuth(['parent']);
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            const stored = localStorage.getItem('parentActiveStudent');
+            if(!stored) {
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            const activeStudent = JSON.parse(stored);
+            document.getElementById('studentNameContext').textContent = `(${activeStudent.name})`;
+
+            try {
+                const res = await ApiClient.request('parent.php', { action: 'get_assignments', className: activeStudent.class_name });
+                const allAss = res.data;
+                const now = new Date();
+
+                const activeContainer = document.getElementById('activeList');
+                const pastContainer = document.getElementById('pastList');
+                let pendingCount = 0;
+
+                if(allAss.length === 0) {
+                    activeContainer.innerHTML = '<p class="text-muted">No assignments posted.</p>';
+                }
+
+                allAss.forEach(ass => {
+                    const dueTime = new Date(ass.due_date);
+                    const isPast = dueTime < now;
+                    if(!isPast) pendingCount++;
+
+                    const bgClass = isPast ? 'rgba(255,255,255,0.02)' : 'rgba(59,130,246,0.05)';
+                    const borderClass = isPast ? 'none' : '1px solid rgba(59,130,246,0.2)';
+                    const textColor = isPast ? 'var(--text-muted)' : 'var(--text-primary)';
+
+                    const div = document.createElement('div');
+                    div.className = 'p-4 rounded transition hover:scale-[1.02]';
+                    div.style.background = bgClass;
+                    div.style.border = borderClass;
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="m-0" style="color: ${textColor}">${ass.title}</h4>
+                            <span class="text-xs text-secondary px-2 py-1 rounded-full" style="background: rgba(255,255,255,0.05);">${ass.subject}</span>
+                        </div>
+                        
+                        <div class="text-xs mt-3 ${isPast ? 'text-danger' : 'text-warning'}">
+                            ${isPast ? 'Was Due:' : 'Due by:'} <strong class="${isPast? '' : 'text-white'}">${dueTime.toLocaleString()}</strong>
+                        </div>
+
+                        ${ass.external_link ? `<a href="${ass.external_link}" target="_blank" class="btn btn-primary mt-4 w-full" style="padding: 0.5rem; font-size: 0.875rem;">Access Submission Link ↗</a>` : ''}
+                    `;
+
+                    if(isPast) {
+                        pastContainer.appendChild(div);
+                    } else {
+                        activeContainer.appendChild(div);
+                    }
+                });
+
+                document.getElementById('pendingCount').textContent = pendingCount;
+                if(pastContainer.children.length === 0) {
+                    pastContainer.innerHTML = '<p class="text-muted">No past assignments.</p>';
+                }
+            } catch(e) {}
+        });
+    </script>
+</body>
+</html>

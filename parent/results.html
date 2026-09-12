@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Term Results | Parent Portal</title>
+    <meta name="description" content="View and print your child's end-of-term result slip">
+    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="../css/parent-portal.css">
+    <style>
+        .filter-select { appearance: none; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-md); padding: 0.5rem 1rem; font-size: 0.875rem; cursor: pointer; outline: none; }
+        .filter-select:focus { border-color: var(--accent-primary); }
+
+        /* ── Result Slip (print-friendly) ──────────────────── */
+        #resultSlip {
+            background: #fff;
+            color: #1a1a2e;
+            border-radius: 16px;
+            padding: 0;
+            overflow: hidden;
+            max-width: 900px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .slip-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 50%, #7c3aed 100%);
+            color: white;
+            padding: 2rem 2.5rem 1.5rem;
+            text-align: center;
+            position: relative;
+            max-width: 900px;
+        }
+        .slip-header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; left: 0; right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #f59e0b, #10b981, #3b82f6, #8b5cf6, #f59e0b);
+        }
+        .school-logo-ring {
+            width: 64px; height: 64px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 0.75rem;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        .slip-school-name { font-size: 1.4rem; font-weight: 800; letter-spacing: 0.02em; margin-bottom: 0.25rem; }
+        .slip-school-sub  { font-size: 0.75rem; opacity: 0.85; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
+        .slip-doc-title   { font-size: 1rem; font-weight: 600; background: rgba(255,255,255,0.15); display: inline-block; padding: 0.25rem 1.5rem; border-radius: 99px; }
+
+        .slip-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .slip-meta-cell {
+            padding: 1rem 1.5rem;
+            border-right: 1px solid #e5e7eb;
+        }
+        .slip-meta-cell:last-child { border-right: none; }
+        .slip-meta-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 0.2rem; }
+        .slip-meta-value { font-size: 0.95rem; font-weight: 700; color: #111827; }
+
+        /* Results table inside slip */
+        .slip-table { width: 100%; border-collapse: collapse; font-size: small; }
+        .slip-table thead tr { background: #1e3a8a; width: fit-content; }
+        .slip-table thead th { color: white; padding: 0.65rem 1rem; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+        .slip-table tbody tr { border-bottom: 1px solid #f3f4f6; }
+        .slip-table tbody tr:nth-child(even) { background: #f9fafb; }
+        .slip-table tbody tr:hover { background: #eff6ff; }
+        .slip-table td { padding: 0.65rem 1rem; color: #374151; }
+
+        .slip-grade-pill {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px; border-radius: 50%;
+            font-weight: 800; font-size: 0.875rem; color: white;
+        }
+        .bg-A { background: #059669; }
+        .bg-B { background: #2563eb; }
+        .bg-C { background: #d97706; }
+        .bg-D { background: #ea580c; }
+        .bg-E { background: #7c3aed; }
+        .bg-F { background: #dc2626; }
+
+        .slip-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0;
+            border-top: 2px solid #e5e7eb;
+        }
+        .slip-summary-cell {
+            padding: 1.25rem 1rem;
+            text-align: center;
+            border-right: 1px solid #e5e7eb;
+        }
+        .slip-summary-cell:last-child { border-right: none; }
+        .slip-summary-val { font-size: 1.75rem; font-weight: 800; color: #1e3a8a; }
+        .slip-summary-lbl { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-top: 0.2rem; }
+
+        .slip-footer {
+            background: #f9fafb;
+            padding: 1rem 2rem;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .slip-footer-text { font-size: 0.7rem; color: #9ca3af; }
+        .sig-line { border-top: 1px solid #9ca3af; width: 140px; margin-top: 2rem; padding-top: 0.25rem; font-size: 0.65rem; color: #9ca3af; text-align: center; }
+
+        /* Grade Key */
+        .grade-key-row { display: flex; gap: 1rem; flex-wrap: wrap; padding: 0.75rem 1.5rem; background: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 0.7rem; color: #6b7280; }
+        .grade-key-item { display: flex; align-items: center; gap: 0.4rem; }
+        .grade-key-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+        @media print {
+            body { background: white !important; }
+            .sidebar, header, .no-print { display: none !important; }
+            .dashboard-layout { display: block !important; }
+            main { padding: 0 !important; }
+            #resultSlip { box-shadow: none !important; max-width: 100% !important; border-radius: 0 !important; }
+            .slip-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .slip-table thead tr { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .slip-grade-pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body class="dashboard-layout">
+    <div class="sidebar-overlay"></div>
+    <aside class="sidebar flex-col no-print">
+        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Kings Accademy<br><span class="text-primary text-sm">Parent Portal</span></h2>
+        <nav class="flex-col w-full h-full">
+            <a href="dashboard.html" class="nav-link">Dashboard Overview</a>
+            <a href="finance.html" class="nav-link">Fee Statement</a>
+            <a href="attendance.html" class="nav-link">Attendance Records</a>
+            <a href="timetable.html" class="nav-link">Student Timetable</a>
+            <a href="assignments.html" class="nav-link">Assignments</a>
+            <a href="results.html" class="nav-link active">Term Results</a>
+            <div style="margin-top: auto;">
+                <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">Logout</button>
+            </div>
+        </nav>
+    </aside>
+
+    <main>
+        <div class="mobile-top-bar no-print">
+            <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+            <span class="font-bold">Term Results</span>
+            <div style="width:24px;"></div>
+        </div>
+
+        <div class="p-8">
+            <header class="mb-6 no-print">
+                <h1 class="text-2xl">Term Result Slip</h1>
+                <p class="text-muted">View and print your child's official end-of-term result slip.</p>
+            </header>
+
+            <!-- Controls -->
+            <div class="glass-panel p-5 mb-6 animate-fade-in no-print">
+                <div class="flex gap-4 flex-wrap items-end">
+                <div class="form-group mb-0" style="flex:1; min-width:160px;">
+                    <label class="form-label">Select Child</label>
+                    <select id="wardSelector" class="filter-select w-full" onchange="onWardChange()">
+                        <option value="">-- Select Child --</option>
+                    </select>
+                </div>
+                <div class="form-group mb-0" style="flex:1; min-width:140px;">
+                    <label class="form-label">Term</label>
+                    <select id="termSelector" class="filter-select w-full">
+                        <option value="First Term">First Term</option>
+                        <option value="Second Term">Second Term</option>
+                        <option value="Third Term">Third Term</option>
+                    </select>
+                </div>
+                <div class="form-group mb-0" style="flex:1; min-width:140px;">
+                    <label class="form-label">Academic Year</label>
+                    <input type="text" id="academicYear" class="filter-select w-full" placeholder="e.g. 2025/2026" style="font-size:0.875rem;">
+                </div>
+                <button class="btn btn-primary" onclick="loadResults()">View Results</button>
+                <button class="btn btn-outline" id="printBtn" onclick="window.print()" style="display:none;">🖨 Print Slip</button>
+            </div>
+        </div>
+
+        <!-- Result Slip -->
+        <div id="slipWrapper" style="display:none;">
+            <div id="resultSlip">
+
+                <!-- Header -->
+                <div class="slip-header">
+                    <div class="school-logo-ring">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                    </div>
+                    <div class="slip-school-name">Kings Accademy International</div>
+                    <div class="slip-school-sub">Excellence · Integrity · Innovation</div>
+                    <div class="slip-doc-title">End-of-Term Academic Report</div>
+                </div>
+
+                <!-- Student Meta -->
+                <div class="slip-meta">
+                    <div class="slip-meta-cell">
+                        <div class="slip-meta-label">Student Name</div>
+                        <div class="slip-meta-value" id="slip-student-name">—</div>
+                    </div>
+                    <div class="slip-meta-cell">
+                        <div class="slip-meta-label">Class</div>
+                        <div class="slip-meta-value" id="slip-class">—</div>
+                    </div>
+                    <div class="slip-meta-cell">
+                        <div class="slip-meta-label">Term &amp; Year</div>
+                        <div class="slip-meta-value" id="slip-term">—</div>
+                    </div>
+                </div>
+
+                <!-- Scores Table -->
+                <table class="slip-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Subject</th>
+                            <th>End of Term Exam (60%)</th>
+                            <th>Project Work (10%)</th>
+                            <th>Group Work (10%)</th>
+                            <th>Assignments (20%)</th>
+                            <th>Total Score</th>
+                            <th>Grade</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody id="slipTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+
+                <!-- Grade Key -->
+                <div class="grade-key-row">
+                    <strong style="color:#374151;">Grade Key:</strong>
+                    <div class="grade-key-item"><div class="grade-key-dot" style="background:#059669;"></div> A: 80–100 · Excellent</div>
+                    <div class="grade-key-item"><div class="grade-key-dot" style="background:#2563eb;"></div> B: 70–79 · Very Good</div>
+                    <div class="grade-key-item"><div class="grade-key-dot" style="background:#d97706;"></div> C: 60–69 · Good</div>
+                    <div class="grade-key-item"><div class="grade-key-dot" style="background:#ea580c;"></div> D: 50–59 · Average</div>
+                    <div class="grade-key-item"><div class="grade-key-dot" style="background:#7c3aed;"></div> E: 40–49 · Below Average</div>
+                    <div class="grade-key-item"><div class="grade-key-dot" style="background:#dc2626;"></div> F: 0–39 · Fail</div>
+                </div>
+
+                <!-- Summary -->
+                <div class="slip-summary">
+                    <div class="slip-summary-cell">
+                        <div class="slip-summary-val" id="slip-subjects">—</div>
+                        <div class="slip-summary-lbl">Subjects</div>
+                    </div>
+                    <div class="slip-summary-cell">
+                        <div class="slip-summary-val" id="slip-total-pts">—</div>
+                        <div class="slip-summary-lbl">Total Points</div>
+                    </div>
+                    <div class="slip-summary-cell">
+                        <div class="slip-summary-val" id="slip-average">—</div>
+                        <div class="slip-summary-lbl">Average Score</div>
+                    </div>
+                    <div class="slip-summary-cell">
+                        <div class="slip-summary-val" id="slip-overall-grade">—</div>
+                        <div class="slip-summary-lbl">Overall Grade</div>
+                    </div>
+                </div>
+
+                <!-- Footer / Signatures -->
+                <div class="slip-footer">
+                    <div class="sig-line">Class Teacher's Signature</div>
+                    <div class="slip-footer-text" style="text-align:center; font-size:0.7rem; color:#9ca3af;">
+                        This result slip is computer-generated and official.<br>
+                        Kings Accademy International · <span id="slip-print-date"></span>
+                    </div>
+                    <div class="sig-line">Head Teacher's Signature</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="noResults" class="glass-panel p-8 text-center animate-fade-in" style="display:none; max-width:500px;">
+            <div style="font-size:3rem; margin-bottom:1rem;">📋</div>
+            <h3 class="mb-2">No Results Found</h3>
+            <p class="text-muted text-sm">Results for this term have not been published yet. Please check back later or select a different term.</p>
+        </div>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        Auth.requireAuth(['parent']);
+        const user = Auth.getCurrentUser();
+
+        const now = new Date();
+        document.getElementById('academicYear').value = `${now.getFullYear()}/${now.getFullYear() + 1}`;
+        document.getElementById('slip-print-date').textContent = now.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+
+        // Load wards into selector
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await ApiClient.request('parent.php', { action: 'get_wards', parentId: user.id });
+                const sel = document.getElementById('wardSelector');
+                res.data.forEach(w => {
+                    const o = document.createElement('option');
+                    o.value = JSON.stringify(w);
+                    o.textContent = `${w.name} (${w.class_name})`;
+                    sel.appendChild(o);
+                });
+
+                // Auto-select if active student stored
+                const stored = localStorage.getItem('parentActiveStudent');
+                if (stored) {
+                    const active = JSON.parse(stored);
+                    [...sel.options].forEach(o => {
+                        if (o.value !== '' && JSON.parse(o.value).id === active.id) sel.value = o.value;
+                    });
+                }
+            } catch(e) {
+                showToast('Failed to load children.', 'error');
+            }
+        });
+
+        function onWardChange() {
+            document.getElementById('slipWrapper').style.display = 'none';
+            document.getElementById('noResults').style.display = 'none';
+            document.getElementById('printBtn').style.display = 'none';
+        }
+
+        async function loadResults() {
+            const wardRaw = document.getElementById('wardSelector').value;
+            const term    = document.getElementById('termSelector').value;
+            const year    = document.getElementById('academicYear').value;
+
+            if (!wardRaw) { showToast('Please select a child.', 'error'); return; }
+            if (!year)    { showToast('Please enter the academic year.', 'error'); return; }
+
+            const ward = JSON.parse(wardRaw);
+
+            try {
+                const res = await ApiClient.request('results.php', {
+                    action:        'get_student_results',
+                    studentId:     ward.id,
+                    term,
+                    academic_year: year
+                });
+
+                const results = res.data || [];
+
+                document.getElementById('slipWrapper').style.display = 'none';
+                document.getElementById('noResults').style.display = 'none';
+                document.getElementById('printBtn').style.display = 'none';
+
+                if (results.length === 0) {
+                    document.getElementById('noResults').style.display = 'block';
+                    return;
+                }
+
+                // Populate slip
+                document.getElementById('slip-student-name').textContent = ward.name;
+                document.getElementById('slip-class').textContent = ward.class_name;
+                document.getElementById('slip-term').textContent = `${term} · ${year}`;
+
+                const tbody = document.getElementById('slipTableBody');
+                tbody.innerHTML = '';
+                let totalPts = 0;
+
+                results.forEach((r, idx) => {
+                    const total = parseFloat(r.total_score);
+                    totalPts += total;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="color:#9ca3af;">${idx + 1}</td>
+                        <td style="font-weight:600; color:#111827;">${r.subject}</td>
+                        <td style="text-align:center;">${parseFloat(r.exam_score).toFixed(1)}</td>
+                        <td style="text-align:center;">${parseFloat(r.project_score).toFixed(1)}</td>
+                        <td style="text-align:center;">${parseFloat(r.group_score).toFixed(1)}</td>
+                        <td style="text-align:center;">${parseFloat(r.assignment_score).toFixed(1)}</td>
+                        <td style="text-align:center; font-weight:700; color:#1e3a8a;">${total.toFixed(1)}</td>
+                        <td style="text-align:center;"><span class="slip-grade-pill bg-${r.grade}">${r.grade}</span></td>
+                        <td style="color:#6b7280; font-size:0.8rem;">${r.remarks}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                const avg = totalPts / results.length;
+                const overallGrade = avg >= 80 ? 'A' : avg >= 70 ? 'B' : avg >= 60 ? 'C' : avg >= 50 ? 'D' : avg >= 40 ? 'E' : 'F';
+
+                document.getElementById('slip-subjects').textContent  = results.length;
+                document.getElementById('slip-total-pts').textContent = totalPts.toFixed(1);
+                document.getElementById('slip-average').textContent   = avg.toFixed(1) + '%';
+                document.getElementById('slip-overall-grade').textContent = overallGrade;
+
+                document.getElementById('slipWrapper').style.display = 'block';
+                document.getElementById('printBtn').style.display = 'inline-flex';
+                document.getElementById('slipWrapper').scrollIntoView({ behavior: 'smooth' });
+
+            } catch(err) {
+                showToast('Failed to load results.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Assignments | Teacher Portal</title>
+    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="../css/teacher-portal.css">
+</head>
+<body class="dashboard-layout">
+    <div class="sidebar-overlay"></div>
+    <aside class="sidebar flex-col">
+        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Teacher<br><span class="text-primary text-sm">Portal</span></h2>
+        <nav class="flex-col w-full h-full">
+            <a href="dashboard.html" class="nav-link">Dashboard Summary</a>
+            <a href="timetable.html" class="nav-link">My Timetable</a>
+            <a href="attendance.html" class="nav-link">Class Attendance</a>
+            <a href="morning-attendance.html" class="nav-link" id="morningAttendanceTab" style="display:none;">Morning Attendance</a>
+            <a href="assignments.html" class="nav-link active">Assignments</a>
+            <a href="results.html" class="nav-link">Exam Results</a>
+            <div style="margin-top: auto;">
+                <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">Logout</button>
+            </div>
+        </nav>
+    </aside>
+
+    <main>
+        <div class="mobile-top-bar">
+            <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+            <span class="font-bold">Assignments</span>
+            <div style="width:24px;"></div>
+        </div>
+
+        <div class="p-8">
+            <header class="mb-8">
+                <h1 class="text-2xl">Class Assignments</h1>
+                <p class="text-muted">Create assignments, set deadlines, and provide external submission links.</p>
+            </header>
+
+            <section class="max-w-6xl summary-grid">
+                
+                <!-- Create Form -->
+                <div class="card card-2 glass-panel p-6 animate-fade-in">
+                    <h2 class="mb-6">New Assignment Setup</h2>
+                    <form id="assignmentForm">
+                        <div class="form-group mb-4">
+                            <label class="form-label" for="assignmentTitle">Title</label>
+                            <input type="text" id="assignmentTitle" class="form-control" placeholder="e.g. Algebra Chapter 2" required>
+                        </div>
+                        
+                        <div class="flex gap-4 mb-4">
+                            <div class="form-group flex-1 mb-0">
+                                <label class="form-label" for="subjectSelector">Subject</label>
+                                <select id="subjectSelector" class="form-control" required>
+                                    <option value="">Select...</option>
+                                </select>
+                            </div>
+                            <div class="form-group flex-1 mb-0">
+                                <label class="form-label" for="classSelector">Class</label>
+                                <select id="classSelector" class="form-control" required>
+                                    <option value="">Select...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label class="form-label" for="dueDate">Submission Deadline</label>
+                            <input type="datetime-local" id="dueDate" class="form-control" required>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label class="form-label" for="externalLink">External Link (Optional)</label>
+                            <input type="url" id="externalLink" class="form-control" placeholder="https://docs.google.com/forms/...">
+                            <small class="text-muted">Links to external platforms or resources.</small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-full mt-2">Publish Assignment</button>
+                    </form>
+                </div>
+
+                <!-- List View -->
+                <div class="card card-1 glass-panel p-6 animate-fade-in delay-100" style="max-height: 80vh; overflow-y: auto;">
+                    <h2 class="mb-6">Posted Assignments</h2>
+                    <div id="assignmentsList" class="flex-col gap-4">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        Auth.requireAuth(['teacher']);
+        
+        const user = Auth.getCurrentUser();
+        
+        if (user.assignedClass) {
+            document.getElementById('morningAttendanceTab').style.display = 'flex';
+        }
+
+        // Populate Selectors
+        document.addEventListener('DOMContentLoaded', async () => {
+            const subjects = Array.isArray(user.subjects) ? user.subjects : (user.subjects||'').split(',').map(s=>s.trim());
+            const subjectSelect = document.getElementById('subjectSelector');
+            subjects.forEach(sub => {
+                const opt = document.createElement('option');
+                opt.value = sub; opt.textContent = sub;
+                subjectSelect.appendChild(opt);
+            });
+
+            try {
+                const classRes = await ApiClient.request('teacher.php', { action: 'get_classes' });
+                const classSelect = document.getElementById('classSelector');
+                classRes.data.forEach(cls => {
+                    const opt = document.createElement('option');
+                    opt.value = cls; opt.textContent = cls;
+                    classSelect.appendChild(opt);
+                });
+            } catch(e) {}
+            
+            renderAssignments();
+        });
+
+        async function renderAssignments() {
+            const listContainer = document.getElementById('assignmentsList');
+            
+            try {
+                const res = await ApiClient.request('teacher.php', { action: 'get_my_assignments', teacherId: user.id });
+                const myAss = res.data;
+                listContainer.innerHTML = '';
+                
+                if(myAss.length === 0) {
+                    listContainer.innerHTML = '<p class="text-muted">No assignments posted.</p>';
+                    return;
+                }
+
+                myAss.forEach(ass => {
+                    const div = document.createElement('div');
+                    div.className = 'glass-panel p-4';
+                    div.style.background = 'rgba(255,255,255,0.02)';
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="text-primary m-0">${ass.title}</h4>
+                            <span class="text-xs text-muted px-2 py-1 rounded-full" style="background: rgba(16,185,129,0.1); color: var(--success);">${ass.class_name}</span>
+                        </div>
+                        <div class="text-sm font-medium mb-2">${ass.subject}</div>
+                        
+                        <div class="text-xs text-secondary mt-2">Due: <strong>${new Date(ass.due_date).toLocaleString()}</strong></div>
+                        ${ass.external_link ? `<a href="${ass.external_link}" target="_blank" class="text-xs text-accent mt-2 inline-block">External Resource/Submission Link ↗</a>` : ''}
+                        
+                        <div class="mt-4 pt-3 border-t border-color flex justify-between items-center" style="border-top: 1px solid rgba(255,255,255,0.05);">
+                            <span class="text-xs text-muted">Created: ${new Date(ass.created_at).toLocaleDateString()}</span>
+                            <button onclick="deleteAssignment('${ass.id}')" class="text-danger" style="background:none;border:none;cursor:pointer;font-size:0.75rem;">Delete</button>
+                        </div>
+                    `;
+                    listContainer.appendChild(div);
+                });
+            } catch(err) {}
+        }
+
+        document.getElementById('assignmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+
+            const title = document.getElementById('assignmentTitle').value;
+            const subject = document.getElementById('subjectSelector').value;
+            const targetClass = document.getElementById('classSelector').value;
+            const dueDate = document.getElementById('dueDate').value;
+            const link = document.getElementById('externalLink').value;
+
+            try {
+                await ApiClient.request('teacher.php', {
+                    action: 'create_assignment',
+                    teacherId: user.id,
+                    title: title,
+                    subject: subject,
+                    className: targetClass,
+                    dueDate: dueDate,
+                    link: link || null
+                });
+                showToast('Assignment published successfully.', 'success');
+                e.target.reset();
+                renderAssignments();
+            } catch (err) {}
+            btn.disabled = false;
+        });
+
+        window.deleteAssignment = async function(id) {
+            if(confirm('Are you sure you want to remove this assignment?')) {
+                try {
+                    await ApiClient.request('teacher.php', { action: 'delete_assignment', teacherId: user.id, id: id });
+                    showToast('Deleted', 'success');
+                    renderAssignments();
+                } catch(err) {}
+            }
+        }
+    </script>
+</body>
+</html>

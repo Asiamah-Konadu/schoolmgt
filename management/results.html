@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results Manager | School System</title>
+    <meta name="description" content="View and print student result slips for all classes">
+    <link rel="stylesheet" href="../css/index.css">
+    <style>
+        .dashboard-layout { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; font-size: small;}
+        .sidebar { background: var(--bg-glass); border-right: 1px solid var(--border-color); padding: 2rem 1rem; }
+        .nav-link { display: flex; align-items: center; padding: 0.75rem 1rem; color: var(--text-secondary); border-radius: var(--radius-md); margin-bottom: 0.5rem; transition: var(--transition); }
+        .nav-link:hover, .nav-link.active { background: var(--accent-glow); color: var(--text-primary); }
+        .filter-select { appearance: none; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-md); padding: 0.5rem 1rem; font-size: 0.875rem; cursor: pointer; outline: none; }
+        .filter-select:focus { border-color: var(--accent-primary); }
+        .grade-pill { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; font-weight:800; font-size:0.8rem; color:white; }
+        .bg-A { background:#059669; } .bg-B { background:#2563eb; } .bg-C { background:#d97706; }
+        .bg-D { background:#ea580c; } .bg-E { background:#7c3aed; } .bg-F { background:#dc2626; }
+
+        /* Student cards overview */
+        .student-result-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.875rem 1.25rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            background: rgba(255,255,255,0.02);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .student-result-card:hover { border-color: var(--accent-primary); background: var(--accent-glow); }
+        .student-avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-primary), #8b5cf6);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; color: white; font-size: 1rem; flex-shrink: 0;
+        }
+        .avg-bar-wrap { flex: 1; }
+        .avg-bar-bg { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+        .avg-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+        .bar-A { background: #059669; } .bar-B { background: #2563eb; } .bar-C { background: #d97706; }
+        .bar-D { background: #ea580c; } .bar-E { background: #7c3aed; } .bar-F { background: #dc2626; }
+
+        /* Print-quality slip (shared with parent) */
+        #modalOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; padding: 1rem;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        #modalOverlay.open { opacity: 1; pointer-events: all; }
+        #modalBox {
+            background: white; border-radius: 16px; overflow: hidden;
+            max-width: 820px; width: 100%; max-height: 90vh;
+            overflow-y: auto; box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+            transform: translateY(20px); transition: transform 0.2s;
+        }
+        #modalOverlay.open #modalBox { transform: translateY(0); }
+        .modal-actions {
+            position: sticky; top: 0; background: white; z-index: 10;
+            padding: 0.75rem 1.5rem;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .slip-header { background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 50%, #7c3aed 100%); color: white; padding: 2rem 2.5rem 1.5rem; text-align: center; position: relative; }
+        .slip-header::after { content:''; position:absolute; bottom:-1px; left:0; right:0; height:6px; background: linear-gradient(90deg, #f59e0b, #10b981, #3b82f6, #8b5cf6, #f59e0b); }
+        .school-logo-ring { width:64px; height:64px; background:rgba(255,255,255,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 0.75rem; border:2px solid rgba(255,255,255,0.3); }
+        .slip-school-name { font-size:1.4rem; font-weight:800; letter-spacing:0.02em; margin-bottom:0.25rem; }
+        .slip-school-sub  { font-size:0.75rem; opacity:0.85; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:1rem; }
+        .slip-doc-title   { font-size:1rem; font-weight:600; background:rgba(255,255,255,0.15); display:inline-block; padding:0.25rem 1.5rem; border-radius:99px; }
+        .slip-meta { display:grid; grid-template-columns:1fr 1fr 1fr; border-bottom:2px solid #e5e7eb; }
+        .slip-meta-cell { padding:1rem 1.5rem; border-right:1px solid #e5e7eb; }
+        .slip-meta-cell:last-child { border-right:none; }
+        .slip-meta-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#6b7280; margin-bottom:0.2rem; }
+        .slip-meta-value { font-size:0.95rem; font-weight:700; color:#111827; }
+        .slip-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+        .slip-table thead tr { background:#1e3a8a; }
+        .slip-table thead th { color:white; padding:0.65rem 1rem; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; white-space:nowrap; }
+        .slip-table tbody tr { border-bottom:1px solid #f3f4f6; }
+        .slip-table tbody tr:nth-child(even) { background:#f9fafb; }
+        .slip-table td { padding:0.65rem 1rem; color:#374151; }
+        .slip-grade-pill { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; font-weight:800; font-size:0.875rem; color:white; }
+        .grade-key-row { display:flex; gap:1rem; flex-wrap:wrap; padding:0.75rem 1.5rem; background:#f9fafb; border-top:1px solid #e5e7eb; font-size:0.7rem; color:#6b7280; }
+        .grade-key-item { display:flex; align-items:center; gap:0.4rem; }
+        .grade-key-dot { width:12px; height:12px; border-radius:50%; }
+        .slip-summary { display:grid; grid-template-columns:repeat(4,1fr); border-top:2px solid #e5e7eb; }
+        .slip-summary-cell { padding:1.25rem 1rem; text-align:center; border-right:1px solid #e5e7eb; }
+        .slip-summary-cell:last-child { border-right:none; }
+        .slip-summary-val { font-size:1.75rem; font-weight:800; color:#1e3a8a; }
+        .slip-summary-lbl { font-size:0.65rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-top:0.2rem; }
+        .slip-footer { background:#f9fafb; padding:1rem 2rem; border-top:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:flex-end; }
+        .sig-line { border-top:1px solid #9ca3af; width:140px; margin-top:2rem; padding-top:0.25rem; font-size:0.65rem; color:#9ca3af; text-align:center; }
+
+        @media print {
+            body { background: white !important; }
+            .sidebar, .no-print, #modalOverlay { display: none !important; }
+            #printableSlip { display: block !important; }
+            .slip-header, .slip-table thead tr { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .slip-grade-pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+        #printableSlip { display: none; }
+     .mobile-top-bar { 
+  display: none; 
+  padding: 1rem; 
+  background: var(--bg-glass); 
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-color); 
+  align-items: center; 
+  justify-content: space-between; 
+  position: sticky; 
+  top: 0; 
+  z-index: 100; 
+}
+
+.sidebar-overlay { 
+  display: none; 
+  position: fixed; 
+  inset: 0; 
+  background: rgba(0,0,0,0.5); 
+  z-index: 900; 
+  backdrop-filter: blur(4px); 
+}
+
+/* Summary Grid System */
+.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+.card-1 { grid-column: span 1; }
+.card-2 { grid-column: span 2; }
+.card-3 { grid-column: span 3; }
+
+@media (max-width: 425px) {
+    .dashboard-layout { grid-template-columns: 1fr; }
+    .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 280px; z-index: 1000; transform: translateX(-100%); }
+    .sidebar.active { transform: translateX(0); }
+    .mobile-top-bar { display: flex; }
+    .p-8 { padding: 1.5rem; }
+}
+
+@media (max-width: 425px) {
+    .summary-grid { grid-template-columns: 1fr; }
+    .card-2, .card-3 { grid-column: span 1; }
+}
+    </style>
+  </head>
+  <body class="dashboard-layout">
+    <div class="sidebar-overlay"></div>
+    <aside class="sidebar flex-col">
+      <h2 class="text-center mb-8" style="font-size: 1.25rem">
+        Kings Accademy<br /><span class="text-primary text-sm">Management</span>
+      </h2>
+
+      <nav class="flex-col w-full h-full">
+        <a href="dashboard.html" class="nav-link">Dashboard</a>
+        <a href="announcements.html" class="nav-link">Announcements</a>
+        <a href="students.html" class="nav-link">Students & Parents</a>
+        <a href="teachers.html" class="nav-link">Teachers</a>
+        <a href="timetable.html" class="nav-link">Timetable Import</a>
+        <a href="results.html" class="nav-link active">Results Manager</a>
+        <a href="finance.html" class="nav-link">Finance Manager</a>
+
+        <div style="margin-top: auto">
+          <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">
+            Logout
+          </button>
+        </div>
+      </nav>
+    </aside>
+
+    <main>
+      <div class="mobile-top-bar">
+        <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+        <span class="font-bold">Admin Dashboard</span>
+        <div style="width:24px;"></div>
+      </div>
+        <header class="mb-8">
+            <h1 class="text-2xl">Results Manager</h1>
+            <p class="text-muted">View, filter and print official result slips for any student across all classes.</p>
+        </header>
+
+        <!-- Filter Bar -->
+        <div class="glass-panel p-5 mb-6 animate-fade-in">
+            <div class="flex gap-4 flex-wrap items-end">
+                <div class="form-group mb-0" style="flex:1; min-width:140px;">
+                    <label class="form-label">Filter by Class</label>
+                    <select id="filterClass" class="filter-select w-full" onchange="applyFilters()">
+                        <option value="">All Classes</option>
+                    </select>
+                </div>
+                <div class="form-group mb-0" style="flex:1; min-width:140px;">
+                    <label class="form-label">Term</label>
+                    <select id="termSelector" class="filter-select w-full">
+                        <option value="First Term">First Term</option>
+                        <option value="Second Term">Second Term</option>
+                        <option value="Third Term">Third Term</option>
+                    </select>
+                </div>
+                <div class="form-group mb-0" style="flex:1; min-width:140px;">
+                    <label class="form-label">Academic Year</label>
+                    <input type="text" id="academicYear" class="filter-select w-full" placeholder="e.g. 2025/2026" style="font-size:0.875rem;">
+                </div>
+                <button class="btn btn-primary" onclick="loadSummary()">Load Results</button>
+            </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="flex gap-4 mb-6" id="statBar" style="display:none !important;">
+            <div class="glass-panel p-4 flex-1 text-center">
+                <div style="font-size:2rem; font-weight:700; color:var(--accent-primary);" id="statStudents">0</div>
+                <div class="text-xs text-muted mt-1">Students with Results</div>
+            </div>
+            <div class="glass-panel p-4 flex-1 text-center">
+                <div style="font-size:2rem; font-weight:700; color:#6ee7b7;" id="statClasses">0</div>
+                <div class="text-xs text-muted mt-1">Classes</div>
+            </div>
+            <div class="glass-panel p-4 flex-1 text-center">
+                <div style="font-size:2rem; font-weight:700; color:#c4b5fd;" id="statAvg">0%</div>
+                <div class="text-xs text-muted mt-1">School Average</div>
+            </div>
+        </div>
+
+        <!-- Student List -->
+        <div class="glass-panel p-6 animate-fade-in">
+            <div class="flex justify-between items-center mb-5">
+                <h2>Student Results</h2>
+                <span id="resultCount" class="text-sm text-muted"></span>
+            </div>
+            <div id="studentList">
+                <p class="text-muted text-sm text-center py-8">Select a term above and click "Load Results" to view student results.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Slip Viewer -->
+    <div id="modalOverlay" onclick="closeModal(event)">
+        <div id="modalBox">
+            <div class="modal-actions no-print">
+                <span class="font-medium" style="color:#1e3a8a;" id="modalTitle">Result Slip</span>
+                <div class="flex gap-3">
+                    <button onclick="printSlip()" style="background:#1e3a8a; color:white; border:none; padding:0.5rem 1.25rem; border-radius:8px; cursor:pointer; font-weight:600;">🖨 Print Slip</button>
+                    <button onclick="closeModal()" style="background:#f3f4f6; color:#374151; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer;">✕ Close</button>
+                </div>
+            </div>
+
+            <!-- Slip content (rendered inside modal, also used for printing) -->
+            <div id="modalSlipContent">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden print area -->
+    <div id="printableSlip"></div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        Auth.requireAuth(['management']);
+
+        const now = new Date();
+        document.getElementById('academicYear').value = `${now.getFullYear()}/${now.getFullYear() + 1}`;
+
+        let allSummary = [];
+        let currentPrintHtml = '';
+
+        // ── Load Summary ─────────────────────────────────────────────────
+        async function loadSummary() {
+            const term = document.getElementById('termSelector').value;
+            const year = document.getElementById('academicYear').value;
+            if (!year) { showToast('Please enter the academic year.', 'error'); return; }
+
+            const list = document.getElementById('studentList');
+            list.innerHTML = '<p class="text-muted text-sm text-center py-6">Loading...</p>';
+
+            try {
+                const res = await ApiClient.request('results.php', {
+                    action: 'get_all_results', term, academic_year: year
+                });
+                allSummary = res.data || [];
+
+                // Populate class filter
+                const classes = [...new Set(allSummary.map(r => r.class_name))].sort();
+                const sel = document.getElementById('filterClass');
+                sel.innerHTML = '<option value="">All Classes</option>' + classes.map(c => `<option>${c}</option>`).join('');
+
+                // Stats
+                const schoolAvg = allSummary.length ? allSummary.reduce((a,b) => a + parseFloat(b.average_score), 0) / allSummary.length : 0;
+                document.getElementById('statStudents').textContent = allSummary.length;
+                document.getElementById('statClasses').textContent  = classes.length;
+                document.getElementById('statAvg').textContent      = schoolAvg.toFixed(1) + '%';
+                document.getElementById('statBar').style.display    = 'flex';
+
+                applyFilters();
+            } catch (err) {
+                list.innerHTML = '<p class="text-danger text-sm text-center py-6">Failed to load results.</p>';
+            }
+        }
+
+        // ── Apply Class Filter ────────────────────────────────────────────
+        function applyFilters() {
+            const filterClass = document.getElementById('filterClass').value;
+            const filtered = filterClass ? allSummary.filter(r => r.class_name === filterClass) : allSummary;
+            renderList(filtered);
+        }
+
+        function renderList(data) {
+            const list = document.getElementById('studentList');
+            document.getElementById('resultCount').textContent = `${data.length} student(s)`;
+
+            if (data.length === 0) {
+                list.innerHTML = '<p class="text-muted text-sm text-center py-8">No results found for the selected filters.</p>';
+                return;
+            }
+
+            const term = document.getElementById('termSelector').value;
+            const year = document.getElementById('academicYear').value;
+
+            list.innerHTML = '<div class="flex-col gap-3" id="cardList"></div>';
+            const cardList = document.getElementById('cardList');
+
+            data.forEach(r => {
+                const avg = parseFloat(r.average_score);
+                const grade = avg >= 80 ? 'A' : avg >= 70 ? 'B' : avg >= 60 ? 'C' : avg >= 50 ? 'D' : avg >= 40 ? 'E' : 'F';
+                const initials = r.student_name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
+
+                const card = document.createElement('div');
+                card.className = 'student-result-card';
+                card.onclick = () => viewSlip(r.student_id, r.student_name, r.class_name, term, year);
+                card.innerHTML = `
+                    <div class="student-avatar">${initials}</div>
+                    <div style="flex:1; min-width:0;">
+                        <div class="font-medium" style="font-size:0.9rem;">${r.student_name}</div>
+                        <div class="text-xs text-muted">${r.class_name} · ${r.subject_count} subject(s)</div>
+                        <div class="avg-bar-wrap mt-2">
+                            <div class="avg-bar-bg"><div class="avg-bar-fill bar-${grade}" style="width:${avg}%;"></div></div>
+                        </div>
+                    </div>
+                    <div style="text-align:right; flex-shrink:0;">
+                        <div class="grade-pill bg-${grade}">${grade}</div>
+                        <div class="text-xs text-muted mt-1">${avg.toFixed(1)}% avg</div>
+                    </div>
+                    <div style="color:var(--text-muted); font-size:1.2rem;">›</div>
+                `;
+                cardList.appendChild(card);
+            });
+        }
+
+        // ── View & Print Slip ─────────────────────────────────────────────
+        async function viewSlip(studentId, studentName, className, term, year) {
+            try {
+                const res = await ApiClient.request('results.php', {
+                    action: 'get_student_results',
+                    studentId, term, academic_year: year
+                });
+
+                const results = res.data || [];
+                if (results.length === 0) { showToast('No detailed results found.', 'error'); return; }
+
+                const html = buildSlipHtml(results, studentName, className, term, year);
+                document.getElementById('modalSlipContent').innerHTML = html;
+                document.getElementById('modalTitle').textContent = `${studentName} — ${term} ${year}`;
+                currentPrintHtml = html;
+
+                document.getElementById('modalOverlay').classList.add('open');
+            } catch(err) {
+                showToast('Failed to load result slip.', 'error');
+            }
+        }
+
+        function buildSlipHtml(results, studentName, className, term, year) {
+            let totalPts = 0;
+            const rows = results.map((r, idx) => {
+                const total = parseFloat(r.total_score);
+                totalPts += total;
+                return `<tr style="border-bottom:1px solid #f3f4f6; ${idx % 2 === 1 ? 'background:#f9fafb;' : ''}">
+                    <td style="padding:0.65rem 1rem;color:#9ca3af;">${idx+1}</td>
+                    <td style="padding:0.65rem 1rem;font-weight:600;color:#111827;">${r.subject}</td>
+                    <td style="padding:0.65rem 1rem;text-align:center;">${parseFloat(r.exam_score).toFixed(1)}</td>
+                    <td style="padding:0.65rem 1rem;text-align:center;">${parseFloat(r.project_score).toFixed(1)}</td>
+                    <td style="padding:0.65rem 1rem;text-align:center;">${parseFloat(r.group_score).toFixed(1)}</td>
+                    <td style="padding:0.65rem 1rem;text-align:center;">${parseFloat(r.assignment_score).toFixed(1)}</td>
+                    <td style="padding:0.65rem 1rem;text-align:center;font-weight:700;color:#1e3a8a;">${total.toFixed(1)}</td>
+                    <td style="padding:0.65rem 1rem;text-align:center;"><span class="slip-grade-pill bg-${r.grade}">${r.grade}</span></td>
+                    <td style="padding:0.65rem 1rem;color:#6b7280;font-size:0.8rem;">${r.remarks}</td>
+                </tr>`;
+            }).join('');
+
+            const avg = totalPts / results.length;
+            const og  = avg >= 80 ? 'A' : avg >= 70 ? 'B' : avg >= 60 ? 'C' : avg >= 50 ? 'D' : avg >= 40 ? 'E' : 'F';
+            const printDate = now.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+
+            return `
+            <div class="slip-header">
+                <div class="school-logo-ring"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+                <div class="slip-school-name">Kings Accademy International</div>
+                <div class="slip-school-sub">Excellence · Integrity · Innovation</div>
+                <div class="slip-doc-title">End-of-Term Academic Report</div>
+            </div>
+            <div class="slip-meta">
+                <div class="slip-meta-cell"><div class="slip-meta-label">Student Name</div><div class="slip-meta-value">${studentName}</div></div>
+                <div class="slip-meta-cell"><div class="slip-meta-label">Class</div><div class="slip-meta-value">${className}</div></div>
+                <div class="slip-meta-cell"><div class="slip-meta-label">Term &amp; Year</div><div class="slip-meta-value">${term} · ${year}</div></div>
+            </div>
+            <table class="slip-table">
+                <thead><tr>
+                    <th>#</th><th>Subject</th><th>Exam (60%)</th><th>Project (10%)</th>
+                    <th>Group (10%)</th><th>Assignments (20%)</th><th>Total</th><th>Grade</th><th>Remarks</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+            <div class="grade-key-row">
+                <strong style="color:#374151;">Grade Key:</strong>
+                <div class="grade-key-item"><div class="grade-key-dot" style="background:#059669;"></div> A: 80–100 · Excellent</div>
+                <div class="grade-key-item"><div class="grade-key-dot" style="background:#2563eb;"></div> B: 70–79 · Very Good</div>
+                <div class="grade-key-item"><div class="grade-key-dot" style="background:#d97706;"></div> C: 60–69 · Good</div>
+                <div class="grade-key-item"><div class="grade-key-dot" style="background:#ea580c;"></div> D: 50–59 · Average</div>
+                <div class="grade-key-item"><div class="grade-key-dot" style="background:#7c3aed;"></div> E: 40–49 · Below Average</div>
+                <div class="grade-key-item"><div class="grade-key-dot" style="background:#dc2626;"></div> F: 0–39 · Fail</div>
+            </div>
+            <div class="slip-summary">
+                <div class="slip-summary-cell"><div class="slip-summary-val">${results.length}</div><div class="slip-summary-lbl">Subjects</div></div>
+                <div class="slip-summary-cell"><div class="slip-summary-val">${totalPts.toFixed(1)}</div><div class="slip-summary-lbl">Total Points</div></div>
+                <div class="slip-summary-cell"><div class="slip-summary-val">${avg.toFixed(1)}%</div><div class="slip-summary-lbl">Average Score</div></div>
+                <div class="slip-summary-cell"><div class="slip-summary-val">${og}</div><div class="slip-summary-lbl">Overall Grade</div></div>
+            </div>
+            <div class="slip-footer">
+                <div class="sig-line">Class Teacher's Signature</div>
+                <div style="text-align:center;font-size:0.7rem;color:#9ca3af;">This result slip is computer-generated and official.<br>Kings Accademy International · ${printDate}</div>
+                <div class="sig-line">Head Teacher's Signature</div>
+            </div>`;
+        }
+
+        function printSlip() {
+            const printEl = document.getElementById('printableSlip');
+            printEl.innerHTML = currentPrintHtml;
+            printEl.style.display = 'block';
+            document.getElementById('modalOverlay').classList.remove('open');
+            setTimeout(() => { window.print(); printEl.style.display = 'none'; }, 200);
+        }
+
+        function closeModal(e) {
+            if (!e || e.target === document.getElementById('modalOverlay')) {
+                document.getElementById('modalOverlay').classList.remove('open');
+            }
+        }
+    </script>
+</body>
+</html>

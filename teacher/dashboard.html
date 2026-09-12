@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard | School System</title>
+    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="../css/teacher-portal.css">
+</head>
+<body class="dashboard-layout">
+    <div class="sidebar-overlay"></div>
+    <aside class="sidebar flex-col">
+        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Teacher<br><span class="text-primary text-sm">Portal</span></h2>
+        <nav class="flex-col w-full h-full">
+            <a href="dashboard.html" class="nav-link active">Dashboard Summary</a>
+            <a href="timetable.html" class="nav-link">My Timetable</a>
+            <a href="attendance.html" class="nav-link">Class Attendance</a>
+            <a href="morning-attendance.html" class="nav-link" id="morningAttendanceTab" style="display:none;">Morning Attendance</a>
+            <a href="assignments.html" class="nav-link">Assignments</a>
+            <a href="results.html" class="nav-link">Exam Results</a>
+            <div style="margin-top: auto;">
+                <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">Logout</button>
+            </div>
+        </nav>
+    </aside>
+
+    <main>
+        <div class="mobile-top-bar">
+            <button onclick="window.UI.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+            <span class="font-bold">Dashboard</span>
+            <div style="width:24px;"></div>
+        </div>
+
+        <div class="p-8">
+            <header class="mb-8">
+                <h1 class="text-2xl">Welcome, <span id="teacherName" class="text-primary">--</span></h1>
+                <p class="text-muted">Here is your schedule and activity summary for today.</p>
+            </header>
+
+            <div class="summary-grid">
+                <!-- High Priority: Lessons Today (2-Columns) -->
+                <div class="card card-2">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="card-icon">📅</div>
+                            <h3>Lessons Today</h3>
+                        </div>
+                        <a href="timetable.html" class="btn btn-outline" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">Full Timetable</a>
+                    </div>
+                    <div id="lessonsPreview" class="preview-list">
+                        <p class="text-muted">Loading today's schedule...</p>
+                    </div>
+                </div>
+
+                <!-- Simple Link: Attendance -->
+                <a href="attendance.html" class="card card-1">
+                    <div class="card-icon" style="background: rgba(16,185,129,0.1); color: #6ee7b7;">✔️</div>
+                    <h3>Attendance</h3>
+                    <p class="text-xs text-muted mt-2">Mark today's student attendance records.</p>
+                </a>
+
+                <!-- Announcements (3-Columns) -->
+                <div class="card card-3">
+                    <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #c4b5fd;">📣</div>
+                    <h3>Recent Announcements</h3>
+                    <div id="announcementsPreview" class="preview-list">
+                        <p class="text-muted">Fetching school updates...</p>
+                    </div>
+                </div>
+
+                <!-- Simple Link: Results -->
+                <a href="results.html" class="card card-1">
+                    <div class="card-icon" style="background: rgba(245,158,11,0.1); color: #fcd34d;">📊</div>
+                    <h3>Exam Results</h3>
+                    <p class="text-xs text-muted mt-2">Input marks and review class performance.</p>
+                </a>
+
+                <!-- Simple Link: Assignments -->
+                <a href="assignments.html" class="card card-1">
+                    <div class="card-icon" style="background: rgba(59,130,246,0.1); color: #93c5fd;">📝</div>
+                    <h3>Assignments</h3>
+                    <p class="text-xs text-muted mt-2">Post new tasks and check submissions.</p>
+                </a>
+                
+                <!-- Simple Link: Profile (Dummy) -->
+                <div class="card card-1">
+                    <div class="card-icon">👤</div>
+                    <h3>My Profile</h3>
+                    <p class="text-xs text-muted mt-2">Update your teacher profile information.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        Auth.requireAuth(['teacher']);
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = Auth.getCurrentUser();
+
+            // Show morning attendance if teacher has an assigned class
+            if (user.assignedClass) {
+                document.getElementById('morningAttendanceTab').style.display = 'flex';
+            }
+
+            document.getElementById('teacherName').textContent = user.name;
+
+            // Load Today's Lessons Summary
+            try {
+                const res = await ApiClient.request('teacher.php', { action: 'get_timetable', teacherId: user.id });
+                const today = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
+                const lessons = (res.data || []).filter(l => l.day === today).slice(0, 3);
+                
+                const container = document.getElementById('lessonsPreview');
+                if (lessons.length === 0) {
+                    container.innerHTML = '<p class="text-muted">No lessons scheduled for today.</p>';
+                } else {
+                    container.innerHTML = lessons.map(l => `
+                        <div class="preview-item">
+                            <span class="font-medium">${l.subject}</span>
+                            <span class="text-muted">${l.time_slot} (${l.class_name})</span>
+                        </div>
+                    `).join('');
+                }
+            } catch(e) { console.error(e); }
+
+            // Load Announcements Summary
+            try {
+                const res = await ApiClient.request('management.php', { action: 'get_announcements' });
+                const announcements = (res.data || []).filter(a => a.target_audience === 'all' || a.target_audience === 'teachers').slice(0, 2);
+                
+                const container = document.getElementById('announcementsPreview');
+                if (announcements.length === 0) {
+                    container.innerHTML = '<p class="text-muted">No recent announcements.</p>';
+                } else {
+                    container.innerHTML = announcements.map(a => `
+                        <div class="preview-item flex-col items-start gap-1">
+                            <div class="flex justify-between w-full">
+                                <span class="font-bold text-primary">${a.title}</span>
+                                <span class="text-xs text-muted">${new Date(a.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <p class="text-xs text-secondary">${a.content.substring(0, 80)}...</p>
+                        </div>
+                    `).join('');
+                }
+            } catch(e) { console.error(e); }
+        });
+    </script>
+</body>
+</html>

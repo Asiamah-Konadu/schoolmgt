@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timetable Manager | School System</title>
+    <meta
+      name="description"
+      content="Import and manage school timetables via CSV upload"
+    />
+    <link rel="stylesheet" href="../css/index.css" />
+    <style>
+      .dashboard-layout {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        min-height: 100vh;
+        font-size: small;
+      }
+      .sidebar {
+        background: var(--bg-glass);
+        border-right: 1px solid var(--border-color);
+        padding: 2rem 1rem;
+      }
+      .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        color: var(--text-secondary);
+        border-radius: var(--radius-md);
+        margin-bottom: 0.5rem;
+        transition: var(--transition);
+      }
+      .nav-link:hover,
+      .nav-link.active {
+        background: var(--accent-glow);
+        color: var(--text-primary);
+      }
+
+      /* Drop Zone */
+      .drop-zone {
+        border: 2px dashed var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: 3rem 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: var(--transition);
+        background: rgba(255, 255, 255, 0.02);
+        position: relative;
+      }
+      .drop-zone:hover,
+      .drop-zone.drag-over {
+        border-color: var(--accent-primary);
+        background: var(--accent-glow);
+      }
+      .drop-zone input[type="file"] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+        width: 100%;
+        height: 100%;
+      }
+      .drop-icon {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 1rem;
+        background: linear-gradient(135deg, var(--accent-primary), #8b5cf6);
+        border-radius: var(--radius-lg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(--shadow-glow);
+      }
+
+      /* Preview Table */
+      .preview-wrapper {
+        overflow-x: auto;
+        max-height: 320px;
+        overflow-y: auto;
+      }
+      .preview-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+      }
+      .preview-table th {
+        padding: 0.6rem 1rem;
+        text-align: left;
+        color: var(--text-muted);
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.03);
+        position: sticky;
+        top: 0;
+      }
+      .preview-table td {
+        padding: 0.6rem 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      }
+      .preview-table tr.row-error td {
+        background: rgba(239, 68, 68, 0.08);
+        color: #f87171;
+      }
+      .preview-table tr.row-ok td {
+        color: var(--text-primary);
+      }
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: 99px;
+        font-size: 0.7rem;
+        font-weight: 600;
+      }
+      .badge-ok {
+        background: rgba(16, 185, 129, 0.15);
+        color: #6ee7b7;
+      }
+      .badge-err {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+      }
+
+      /* Timetable Grid */
+      .tt-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+      }
+      .tt-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        transition: var(--transition);
+      }
+      .tt-card:hover {
+        border-color: var(--accent-primary);
+        background: var(--accent-glow);
+      }
+      .day-pill {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 99px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .day-Mon {
+        background: rgba(59, 130, 246, 0.2);
+        color: #93c5fd;
+      }
+      .day-Tue {
+        background: rgba(139, 92, 246, 0.2);
+        color: #c4b5fd;
+      }
+      .day-Wed {
+        background: rgba(16, 185, 129, 0.2);
+        color: #6ee7b7;
+      }
+      .day-Thu {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fcd34d;
+      }
+      .day-Fri {
+        background: rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+      }
+      .day-Sat {
+        background: rgba(236, 72, 153, 0.2);
+        color: #f9a8d4;
+      }
+      .day-Sun {
+        background: rgba(107, 114, 128, 0.2);
+        color: #d1d5db;
+      }
+
+      .sample-link {
+        font-size: 0.75rem;
+        color: var(--accent-primary);
+        cursor: pointer;
+      }
+      .sample-link:hover {
+        text-decoration: underline;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 1.5rem;
+      }
+      .tab-btn {
+        padding: 0.6rem 1.2rem;
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        transition: var(--transition);
+      }
+      .tab-btn.active {
+        color: var(--accent-primary);
+        border-bottom-color: var(--accent-primary);
+      }
+      .tab-panel {
+        display: none;
+      }
+      .tab-panel.active {
+        display: block;
+      }
+
+      .filter-select {
+        appearance: none;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        border-radius: var(--radius-md);
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        outline: none;
+      }
+      .filter-select:focus {
+        border-color: var(--accent-primary);
+      }
+     .mobile-top-bar { 
+  display: none; 
+  padding: 1rem; 
+  background: var(--bg-glass); 
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-color); 
+  align-items: center; 
+  justify-content: space-between; 
+  position: sticky; 
+  top: 0; 
+  z-index: 100; 
+}
+
+.sidebar-overlay { 
+  display: none; 
+  position: fixed; 
+  inset: 0; 
+  background: rgba(0,0,0,0.5); 
+  z-index: 900; 
+  backdrop-filter: blur(4px); 
+}
+
+/* Summary Grid System */
+.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+.card-1 { grid-column: span 1; }
+.card-2 { grid-column: span 2; }
+.card-3 { grid-column: span 3; }
+
+@media (max-width: 425px) {
+    .dashboard-layout { grid-template-columns: 1fr; }
+    .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 280px; z-index: 1000; transform: translateX(-100%); }
+    .sidebar.active { transform: translateX(0); }
+    .mobile-top-bar { display: flex; }
+    .p-8 { padding: 1.5rem; }
+}
+
+@media (max-width: 425px) {
+    .summary-grid { grid-template-columns: 1fr; }
+    .card-2, .card-3 { grid-column: span 1; }
+}
+    </style>
+  </head>
+  <body class="dashboard-layout">
+    <div class="sidebar-overlay"></div>
+    <aside class="sidebar flex-col">
+      <h2 class="text-center mb-8" style="font-size: 1.25rem">
+        Kings Accademy<br /><span class="text-primary text-sm">Management</span>
+      </h2>
+
+      <nav class="flex-col w-full h-full">
+        <a href="dashboard.html" class="nav-link">Dashboard</a>
+        <a href="announcements.html" class="nav-link">Announcements</a>
+        <a href="students.html" class="nav-link">Students & Parents</a>
+        <a href="teachers.html" class="nav-link">Teachers</a>
+        <a href="timetable.html" class="nav-link active">Timetable Import</a>
+        <a href="results.html" class="nav-link">Results Manager</a>
+        <a href="finance.html" class="nav-link">Finance Manager</a>
+
+        <div style="margin-top: auto">
+          <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">
+            Logout
+          </button>
+        </div>
+      </nav>
+    </aside>
+
+    <main>
+      <div class="mobile-top-bar">
+        <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+        <span class="font-bold">Admin Dashboard</span>
+        <div style="width:24px;"></div>
+      </div>
+      <header class="mb-8">
+        <h1 class="text-2xl">Timetable Manager</h1>
+        <p class="text-muted">
+          Import weekly timetables from a CSV file. Teacher ID and email are
+          validated against registered staff.
+        </p>
+      </header>
+
+      <section class="max-w-6xl">
+        <!-- Tabs -->
+        <div class="tabs">
+          <button
+            class="tab-btn active"
+            id="tab-import"
+            onclick="switchTab('import')"
+          >
+            📥 Import CSV
+          </button>
+          <button class="tab-btn" id="tab-view" onclick="switchTab('view')">
+            📋 View Timetables
+          </button>
+        </div>
+
+        <!-- ── IMPORT TAB ── -->
+        <div class="tab-panel active" id="panel-import">
+          <div class="grid gap-8" style="grid-template-columns: 1fr 2fr">
+            <!-- Instructions -->
+            <div class="flex-col gap-4">
+              <div class="glass-panel p-6 animate-fade-in">
+                <h2 class="mb-4">CSV Format</h2>
+                <p class="text-sm text-secondary mb-4">
+                  Your file must have exactly these column headers:
+                </p>
+                <code
+                  style="
+                    display: block;
+                    background: rgba(0, 0, 0, 0.3);
+                    border-radius: var(--radius-md);
+                    padding: 1rem;
+                    font-size: 0.75rem;
+                    line-height: 1.8;
+                    color: #93c5fd;
+                  "
+                >
+                  class_name, day, time_slot,<br />
+                  subject, teacher_id, teacher_email
+                </code>
+                <p class="text-xs text-muted mt-4 mb-2">
+                  Valid days: <strong>Monday – Sunday</strong><br />
+                  Teacher ID & Email must match a registered teacher.
+                </p>
+                <span class="sample-link" onclick="downloadSample()"
+                  >⬇ Download Sample CSV</span
+                >
+              </div>
+
+              <div
+                class="glass-panel p-6 animate-fade-in delay-100"
+                id="importSummaryBox"
+                style="display: none"
+              >
+                <h2 class="mb-4">Import Summary</h2>
+                <div id="importSummaryContent"></div>
+              </div>
+            </div>
+
+            <!-- Upload + Preview -->
+            <div class="flex-col gap-6">
+              <div class="glass-panel p-6 animate-fade-in delay-100">
+                <h2 class="mb-4">Upload File</h2>
+
+                <div class="drop-zone" id="dropZone">
+                  <input
+                    type="file"
+                    id="csvFileInput"
+                    accept=".csv"
+                    onchange="handleFile(this.files[0])"
+                  />
+                  <div class="drop-icon">
+                    <svg
+                      width="28"
+                      height="28"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                  </div>
+                  <p class="font-medium mb-1" id="dropText">
+                    Click or drag a CSV file here
+                  </p>
+                  <p class="text-xs text-muted" id="dropSubtext">
+                    Supported format: .csv
+                  </p>
+                </div>
+
+                <!-- Preview Table -->
+                <div
+                  id="previewSection"
+                  style="display: none; margin-top: 1.5rem"
+                >
+                  <div class="flex justify-between items-center mb-3">
+                    <h3 style="font-size: 0.9rem">Preview &amp; Validation</h3>
+                    <span id="previewStats" class="text-xs text-muted"></span>
+                  </div>
+                  <div class="preview-wrapper">
+                    <table class="preview-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Class</th>
+                          <th>Day</th>
+                          <th>Time</th>
+                          <th>Subject</th>
+                          <th>Teacher ID</th>
+                          <th>Email</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody id="previewBody"></tbody>
+                    </table>
+                  </div>
+
+                  <div class="flex gap-3 mt-4" id="importActions">
+                    <button
+                      class="btn btn-primary flex-1"
+                      id="importBtn"
+                      onclick="executeImport()"
+                      disabled
+                    >
+                      Import Valid Rows
+                    </button>
+                    <button class="btn btn-outline" onclick="resetImport()">
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── VIEW TAB ── -->
+        <div class="tab-panel" id="panel-view">
+          <div class="glass-panel p-6 animate-fade-in">
+            <div class="flex justify-between items-center mb-6">
+              <h2>All Scheduled Timetables</h2>
+              <div class="flex gap-3 items-center">
+                <select
+                  id="filterClass"
+                  class="filter-select"
+                  onchange="renderTimetableView()"
+                >
+                  <option value="">All Classes</option>
+                </select>
+                <select
+                  id="filterDay"
+                  class="filter-select"
+                  onchange="renderTimetableView()"
+                >
+                  <option value="">All Days</option>
+                  <option>Monday</option>
+                  <option>Tuesday</option>
+                  <option>Wednesday</option>
+                  <option>Thursday</option>
+                  <option>Friday</option>
+                  <option>Saturday</option>
+                  <option>Sunday</option>
+                </select>
+                <button
+                  class="btn btn-outline"
+                  style="padding: 0.5rem 1rem; font-size: 0.875rem"
+                  onclick="loadAllTimetables()"
+                >
+                  🔄 Refresh
+                </button>
+              </div>
+            </div>
+            <div id="timetableGrid" class="tt-grid">
+              <p class="text-muted text-sm">Loading timetable data...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+      Auth.requireAuth(["management"]);
+
+      // ─── Tab Logic ────────────────────────────────────────────
+      function switchTab(name) {
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((b) => b.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-panel")
+          .forEach((p) => p.classList.remove("active"));
+        document.getElementById("tab-" + name).classList.add("active");
+        document.getElementById("panel-" + name).classList.add("active");
+        if (name === "view") loadAllTimetables();
+      }
+
+      // ─── Drag-Over Styling ────────────────────────────────────
+      const dropZone = document.getElementById("dropZone");
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+      });
+      dropZone.addEventListener("dragleave", () =>
+        dropZone.classList.remove("drag-over"),
+      );
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const f = e.dataTransfer.files[0];
+        if (f) handleFile(f);
+      });
+
+      // ─── CSV Parsing ──────────────────────────────────────────
+      let parsedRows = [];
+
+      function parseCSV(text) {
+        const lines = text.trim().split("\n");
+        if (lines.length < 2) return [];
+        const headers = lines[0]
+          .split(",")
+          .map((h) => h.trim().toLowerCase().replace(/\s+/g, "_"));
+        return lines.slice(1).map((line, i) => {
+          const cols = line.split(",").map((c) => c.trim());
+          const obj = {};
+          headers.forEach((h, idx) => (obj[h] = cols[idx] || ""));
+          obj._row = i + 2;
+          return obj;
+        });
+      }
+
+      const VALID_DAYS = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ];
+
+      async function handleFile(file) {
+        if (!file || !file.name.endsWith(".csv")) {
+          showToast("Please select a valid .csv file", "error");
+          return;
+        }
+
+        document.getElementById("dropText").textContent = file.name;
+        document.getElementById("dropSubtext").textContent =
+          `${(file.size / 1024).toFixed(1)} KB`;
+
+        const text = await file.text();
+        const rows = parseCSV(text);
+
+        if (rows.length === 0) {
+          showToast("CSV is empty or has no data rows.", "error");
+          return;
+        }
+
+        // Validate required headers
+        const requiredHeaders = [
+          "class_name",
+          "day",
+          "time_slot",
+          "subject",
+          "teacher_id",
+          "teacher_email",
+        ];
+        const sampleRow = rows[0];
+        const missing = requiredHeaders.filter((h) => !(h in sampleRow));
+        if (missing.length > 0) {
+          showToast(`Missing columns: ${missing.join(", ")}`, "error");
+          return;
+        }
+
+        // Fetch all teachers for validation
+        let teacherMap = {}; // id -> { email }
+        try {
+          const res = await ApiClient.request("management.php", {
+            action: "get_teachers",
+          });
+          res.data.forEach((t) => {
+            teacherMap[t.id] = { email: (t.email || "").toLowerCase() };
+          });
+        } catch (e) {
+          showToast("Failed to fetch teacher list for validation.", "error");
+          return;
+        }
+
+        // Annotate each row
+        parsedRows = rows.map((row) => {
+          const errors = [];
+          if (!row.class_name) errors.push("Missing class");
+          if (!VALID_DAYS.includes(row.day))
+            errors.push(`Invalid day: "${row.day}"`);
+          if (!row.time_slot) errors.push("Missing time");
+          if (!row.subject) errors.push("Missing subject");
+          if (!row.teacher_id) errors.push("Missing teacher ID");
+          if (!row.teacher_email) errors.push("Missing email");
+
+          if (row.teacher_id && !teacherMap[row.teacher_id]) {
+            errors.push(`Teacher ID "${row.teacher_id}" not found`);
+          } else if (row.teacher_id && teacherMap[row.teacher_id]) {
+            const expectedEmail = teacherMap[row.teacher_id].email;
+            if (row.teacher_email.toLowerCase() !== expectedEmail) {
+              errors.push(`Email mismatch for ${row.teacher_id}`);
+            }
+          }
+
+          return { ...row, _valid: errors.length === 0, _errors: errors };
+        });
+
+        renderPreview();
+      }
+
+      function renderPreview() {
+        const tbody = document.getElementById("previewBody");
+        tbody.innerHTML = "";
+        const validCount = parsedRows.filter((r) => r._valid).length;
+        const errorCount = parsedRows.length - validCount;
+
+        document.getElementById("previewStats").textContent =
+          `${parsedRows.length} rows · ✅ ${validCount} valid · ❌ ${errorCount} errors`;
+
+        parsedRows.forEach((row) => {
+          const tr = document.createElement("tr");
+          tr.className = row._valid ? "row-ok" : "row-error";
+          tr.innerHTML = `
+                    <td>${row._row}</td>
+                    <td>${row.class_name}</td>
+                    <td>${row.day}</td>
+                    <td>${row.time_slot}</td>
+                    <td>${row.subject}</td>
+                    <td><strong>${row.teacher_id}</strong></td>
+                    <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis;">${row.teacher_email}</td>
+                    <td>
+                        ${
+                          row._valid
+                            ? '<span class="status-badge badge-ok">✓ OK</span>'
+                            : `<span class="status-badge badge-err" title="${row._errors.join("; ")}">✗ Error</span>`
+                        }
+                    </td>
+                `;
+          tbody.appendChild(tr);
+        });
+
+        document.getElementById("previewSection").style.display = "block";
+        document.getElementById("importBtn").disabled = validCount === 0;
+      }
+
+      function resetImport() {
+        parsedRows = [];
+        document.getElementById("previewSection").style.display = "none";
+        document.getElementById("importSummaryBox").style.display = "none";
+        document.getElementById("csvFileInput").value = "";
+        document.getElementById("dropText").textContent =
+          "Click or drag a CSV file here";
+        document.getElementById("dropSubtext").textContent =
+          "Supported format: .csv";
+        document.getElementById("previewBody").innerHTML = "";
+      }
+
+      async function executeImport() {
+        const validRows = parsedRows.filter((r) => r._valid);
+        if (validRows.length === 0) return;
+
+        const btn = document.getElementById("importBtn");
+        btn.disabled = true;
+        btn.textContent = "Importing...";
+
+        try {
+          const res = await ApiClient.request("management.php", {
+            action: "import_timetable",
+            rows: validRows.map((r) => ({
+              class_name: r.class_name,
+              day: r.day,
+              time_slot: r.time_slot,
+              subject: r.subject,
+              teacher_id: r.teacher_id,
+            })),
+          });
+
+          if (res.status === "success") {
+            showToast(
+              `✅ ${res.inserted} rows imported successfully!`,
+              "success",
+            );
+            document.getElementById("importSummaryBox").style.display = "block";
+            document.getElementById("importSummaryContent").innerHTML = `
+                        <div class="flex gap-4 mb-3">
+                            <div style="flex:1; text-align:center; padding:1rem; background:rgba(16,185,129,0.1); border-radius: var(--radius-md);">
+                                <div style="font-size:2rem; font-weight:700; color:#6ee7b7;">${res.inserted}</div>
+                                <div class="text-xs text-muted mt-1">Rows Inserted</div>
+                            </div>
+                            <div style="flex:1; text-align:center; padding:1rem; background:rgba(239,68,68,0.1); border-radius: var(--radius-md);">
+                                <div style="font-size:2rem; font-weight:700; color:#f87171;">${res.skipped}</div>
+                                <div class="text-xs text-muted mt-1">Skipped (Duplicate)</div>
+                            </div>
+                        </div>
+                        <p class="text-xs text-muted">Switch to the <strong>View Timetables</strong> tab to see all schedules.</p>
+                    `;
+            resetImport();
+          } else {
+            showToast(
+              "Import failed: " + (res.message || "Unknown error"),
+              "error",
+            );
+          }
+        } catch (err) {
+          showToast("Network error during import.", "error");
+        }
+
+        btn.disabled = false;
+        btn.textContent = "Import Valid Rows";
+      }
+
+      // ─── Sample CSV Download ───────────────────────────────────
+      function downloadSample() {
+        const csv = `class_name,day,time_slot,subject,teacher_id,teacher_email
+Grade 10A,Monday,08:00 - 09:00,Mathematics,TCH1001,teacher1@school.edu
+Grade 10A,Monday,09:00 - 10:00,English,TCH1002,teacher2@school.edu
+Grade 10A,Tuesday,08:00 - 09:00,Physics,TCH1001,teacher1@school.edu
+Grade 10B,Monday,08:00 - 09:00,Biology,TCH1003,teacher3@school.edu`;
+        const a = document.createElement("a");
+        a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+        a.download = "timetable_sample.csv";
+        a.click();
+      }
+
+      // ─── View Timetables ──────────────────────────────────────
+      let allTimetables = [];
+
+      async function loadAllTimetables() {
+        const grid = document.getElementById("timetableGrid");
+        grid.innerHTML = '<p class="text-muted text-sm">Loading...</p>';
+        try {
+          const res = await ApiClient.request("management.php", {
+            action: "get_all_timetables",
+          });
+          allTimetables = res.data || [];
+
+          // Populate class filter
+          const classes = [
+            ...new Set(allTimetables.map((t) => t.class_name)),
+          ].sort();
+          const sel = document.getElementById("filterClass");
+          sel.innerHTML =
+            '<option value="">All Classes</option>' +
+            classes.map((c) => `<option>${c}</option>`).join("");
+
+          renderTimetableView();
+        } catch (err) {
+          grid.innerHTML =
+            '<p class="text-danger text-sm">Failed to load timetables.</p>';
+        }
+      }
+
+      function renderTimetableView() {
+        const filterClass = document.getElementById("filterClass").value;
+        const filterDay = document.getElementById("filterDay").value;
+        const grid = document.getElementById("timetableGrid");
+
+        let data = allTimetables;
+        if (filterClass)
+          data = data.filter((t) => t.class_name === filterClass);
+        if (filterDay) data = data.filter((t) => t.day === filterDay);
+
+        if (data.length === 0) {
+          grid.innerHTML =
+            '<p class="text-muted text-sm">No timetable entries found. Import a CSV to get started.</p>';
+          return;
+        }
+
+        const daysOrder = [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday",
+        ];
+        data.sort(
+          (a, b) =>
+            daysOrder.indexOf(a.day) - daysOrder.indexOf(b.day) ||
+            a.time_slot.localeCompare(b.time_slot),
+        );
+
+        grid.innerHTML = data
+          .map((tt) => {
+            const dayShort = tt.day.slice(0, 3);
+            return `
+                <div class="tt-card">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="day-pill day-${dayShort}">${tt.day}</span>
+                        <span class="text-xs text-muted">${tt.time_slot}</span>
+                    </div>
+                    <div class="font-medium mb-1" style="font-size:0.95rem;">${tt.subject}</div>
+                    <div class="text-xs text-muted mb-2">Class: <strong class="text-secondary">${tt.class_name}</strong></div>
+                    <div class="text-xs" style="color: #93c5fd;">👤 ${tt.teacherName || tt.teacher_id}</div>
+                    <div class="flex justify-end mt-3">
+                        <button onclick="deleteEntry('${tt.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.7rem;" class="hover:text-danger">🗑 Remove</button>
+                    </div>
+                </div>`;
+          })
+          .join("");
+      }
+
+      window.deleteEntry = async function (id) {
+        if (!confirm("Remove this timetable entry?")) return;
+        try {
+          await ApiClient.request("management.php", {
+            action: "delete_timetable",
+            id,
+          });
+          showToast("Entry removed.", "success");
+          loadAllTimetables();
+        } catch (e) {
+          showToast("Failed to delete.", "error");
+        }
+      };
+    </script>
+  </body>
+</html>

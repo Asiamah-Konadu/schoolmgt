@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Promotion | Teacher Portal</title>
+    <link rel="stylesheet" href="../css/index.css">
+    <style>
+        .dashboard-layout { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; }
+        .sidebar { background: var(--bg-glass); border-right: 1px solid var(--border-color); padding: 2rem 1rem; }
+        .nav-link { display: flex; align-items: center; padding: 0.75rem 1rem; color: var(--text-secondary); border-radius: var(--radius-md); margin-bottom: 0.5rem; transition: var(--transition); }
+        .nav-link:hover, .nav-link.active { background: var(--accent-glow); color: var(--text-primary); }
+        .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .badge-none { background: rgba(255,255,255,0.1); color: var(--text-secondary); }
+        .badge-recommended { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        .badge-promoted { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+    </style>
+</head>
+<body class="dashboard-layout">
+    <aside class="sidebar flex-col">
+        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Teacher<br><span class="text-primary text-sm">Portal</span></h2>
+        <nav class="flex-col w-full h-full">
+           <a href="dashboard.html" class="nav-link ">Dashboard & Profile</a>
+        <a href="timetable.html" class="nav-link">My Timetable</a>
+        <a href="attendance.html" class="nav-link">Class Attendance</a>
+        <a href="morning-attendance.html" class="nav-link" id="morningAttendanceTab" style="display: none">Morning Attendance</a>
+        <a href="assignments.html" class="nav-link">Assignments</a>
+        <a href="results.html" class="nav-link">Exam Results</a>
+        <a href="promotion.html" class="nav-link active">Student Promotion</a>
+        <a href="messages.html" class="nav-link">Messages</a>            
+        <div style="margin-top: auto;">
+                <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">Logout</button>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="p-8">
+        <header class="mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl">Class Promotion</h1>
+                <p class="text-muted">Recommend students for the next academic class.</p>
+            </div>
+            <div class="glass-panel px-4 py-2" style="border-radius: var(--radius-md);">
+                <span class="text-sm">Class: <strong id="assignedClassDisplay" class="text-primary"></strong></span>
+            </div>
+        </header>
+
+        <section class="max-w-4xl">
+            <div class="glass-panel p-6 animate-fade-in">
+                <div style="overflow-x: auto;">
+                    <table class="w-full text-left" style="border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <th class="p-4 text-muted font-medium">Student Name</th>
+                                <th class="p-4 text-muted font-medium">Status</th>
+                                <th class="p-4 text-muted font-medium text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="promotionTableBody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        Auth.requireAuth(['teacher']);
+        const user = Auth.getCurrentUser();
+        if (user.assignedClass) {
+            document.getElementById('morningAttendanceTab').style.display = 'flex';
+        }
+        
+        if (!user.assignedClass) {
+            window.location.href = 'dashboard.html';
+        }
+
+        document.getElementById('assignedClassDisplay').textContent = user.assignedClass;
+
+        async function loadPromotionList() {
+            const tbody = document.getElementById('promotionTableBody');
+            try {
+                const res = await ApiClient.request('teacher.php', {
+                    action: 'get_promotion_list',
+                    className: user.assignedClass
+                });
+
+                tbody.innerHTML = '';
+                if (res.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-muted">No students in this class.</td></tr>';
+                    return;
+                }
+
+                res.data.forEach(stu => {
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                    
+                    let statusBadge = '';
+                    let actionBtn = '';
+
+                    if (stu.promotion_status === 'none') {
+                        statusBadge = '<span class="badge badge-none">Not Recommended</span>';
+                        actionBtn = `<button onclick="recommend('${stu.id}', '${stu.name.replace(/'/g, "\\'")}')" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">Recommend</button>`;
+                    } else if (stu.promotion_status === 'recommended') {
+                        statusBadge = '<span class="badge badge-recommended">Pending Approval</span>';
+                        actionBtn = `<button disabled class="btn btn-outline" style="opacity:0.5; padding: 0.25rem 0.75rem; font-size: 0.75rem;">Waiting...</button>`;
+                    } else if (stu.promotion_status === 'promoted') {
+                        statusBadge = '<span class="badge badge-promoted">Promoted</span>';
+                        actionBtn = `<button disabled class="btn btn-outline" style="opacity:0.5; padding: 0.25rem 0.75rem; font-size: 0.75rem;">Completed</button>`;
+                    }
+
+                    tr.innerHTML = `
+                        <td class="p-4 font-medium text-primary">${stu.name}</td>
+                        <td class="p-4">${statusBadge}</td>
+                        <td class="p-4 text-right">${actionBtn}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        window.recommend = async function(id, name) {
+            if (!confirm(`Are you sure you want to recommend ${name} for promotion to the next class?`)) return;
+            
+            try {
+                await ApiClient.request('teacher.php', {
+                    action: 'recommend_promotion',
+                    studentId: id
+                });
+                showToast(`Recommended ${name} for promotion.`, 'success');
+                loadPromotionList();
+            } catch (err) {
+                showToast('Failed to recommend student.', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadPromotionList);
+    </script>
+</body>
+</html>

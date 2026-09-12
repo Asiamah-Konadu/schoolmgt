@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>School Management System | Login</title>
+    <meta
+      name="description"
+      content="Login portal for the School Management System"
+    />
+    <link rel="stylesheet" href="css/index.css" />
+    <style>
+      .role-selector-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-full);
+      }
+      .role-btn {
+        flex: 1;
+        padding: 0.65rem 1rem;
+        border-radius: var(--radius-full);
+        font-size: 0.875rem;
+        font-weight: 600;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: var(--transition);
+        white-space: nowrap;
+      }
+      .role-btn:hover:not(.active) {
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .role-btn.active {
+        background: var(--accent-primary);
+        color: white;
+        box-shadow: 0 4px 12px var(--border-glow);
+      }
+    </style>
+  </head>
+  <body class="flex items-center justify-center min-h-screen">
+    <main class="w-full max-w-md p-4 animate-fade-in">
+      <div class="glass-panel p-8 text-center">
+        <div class="mb-8">
+          <!-- Simple Logo / Icon placeholder -->
+          <div
+            style="
+              width: 60px;
+              height: 60px;
+              background: linear-gradient(
+                135deg,
+                var(--accent-primary),
+                #8b5cf6
+              );
+              border-radius: var(--radius-lg);
+              margin: 0 auto;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: var(--shadow-glow);
+            "
+          >
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+              <path d="M6 12v5c3 3 9 3 12 0v-5" />
+            </svg>
+          </div>
+          <h1 class="mt-4" style="font-size: 1.5rem">Kings Accademy International</h1>
+          <p class="text-secondary text-sm">Access Your Portal</p>
+        </div>
+
+        <!-- Role Selection Segmented Control -->
+        <div class="role-selector-container mb-6 p-1">
+          <button
+            class="role-btn active"
+            onclick="switchRole('management', this)"
+          >
+            Admin
+          </button>
+          <button
+            class="role-btn"
+            onclick="switchRole('teacher', this)"
+          >
+            Teacher
+          </button>
+          <button
+            class="role-btn"
+            onclick="switchRole('parent', this)"
+          >
+            Parent
+          </button>
+        </div>
+
+        <form id="loginForm" class="text-left">
+          <input type="hidden" id="loginRole" value="management" />
+
+          <div class="form-group animate-fade-in">
+            <label class="form-label" for="userId">Username, ID or Email</label>
+            <input
+              type="text"
+              id="userId"
+              class="form-control"
+              placeholder="e.g. ADM001"
+              required
+            />
+          </div>
+
+          <div class="form-group animate-fade-in delay-100">
+            <label class="form-label" for="password">Password</label>
+            <div style="position: relative">
+              <input
+                type="password"
+                id="password"
+                class="form-control"
+                placeholder="••••••••"
+                required
+                style="padding-right: 3rem"
+              />
+              <button
+                type="button"
+                id="togglePassword"
+                onclick="togglePwdVisibility()"
+                title="Show/Hide Password"
+                style="
+                  position: absolute;
+                  right: 0.75rem;
+                  top: 50%;
+                  transform: translateY(-50%);
+                  background: none;
+                  border: none;
+                  cursor: pointer;
+                  color: var(--text-muted);
+                  display: flex;
+                  align-items: center;
+                  padding: 0;
+                  transition: color 0.2s;
+                "
+              >
+                <!-- Eye Open -->
+                <svg
+                  id="eyeOpen"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                <!-- Eye Closed -->
+                <svg
+                  id="eyeClosed"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="display: none"
+                >
+                  <path
+                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+                  />
+                  <path
+                    d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
+                  />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              </button>
+            </div>
+            <div
+              id="parentHint"
+              class="text-muted text-xs mt-2"
+              style="display: none"
+            >
+              Parents: Use your Phone Number as the password
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            class="btn btn-primary w-full mt-4 animate-fade-in delay-200"
+          >
+            Login
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              <polyline points="10 17 15 12 10 7" />
+              <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+          </button>
+        </form>
+
+        <div
+          class="mt-6 pt-6 border-t"
+          style="border-top: 1px solid var(--border-color)"
+        >
+          <p class="text-xs text-muted mb-0">Democredentials:</p>
+          <p class="text-xs text-muted">Admin: ADM001 / password123</p>
+          <p class="text-xs text-muted">Teacher: TCH001 / password123</p>
+          <p class="text-xs text-muted">Parent: PAR001 / 555-0101</p>
+        </div>
+      </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+      // Check if already logged in
+      const currentUser = Auth.getCurrentUser();
+      if (currentUser) {
+        window.location.href = currentUser.role + "/dashboard.html";
+      }
+
+      // Password Visibility Toggle
+      function togglePwdVisibility() {
+        const pwdInput = document.getElementById("password");
+        const eyeOpen = document.getElementById("eyeOpen");
+        const eyeClosed = document.getElementById("eyeClosed");
+        const btn = document.getElementById("togglePassword");
+        const isHidden = pwdInput.type === "password";
+        pwdInput.type = isHidden ? "text" : "password";
+        eyeOpen.style.display = isHidden ? "none" : "block";
+        eyeClosed.style.display = isHidden ? "block" : "none";
+        btn.style.color = isHidden
+          ? "var(--accent-primary)"
+          : "var(--text-muted)";
+      }
+
+      // Handle Role Switching
+      function switchRole(role, btnEl) {
+        document.getElementById("loginRole").value = role;
+
+        // Update Tab Styles
+        const parent = btnEl.parentElement;
+        parent.querySelectorAll(".role-btn").forEach((btn) => {
+          btn.classList.remove("active");
+        });
+        btnEl.classList.add("active");
+
+        // Update hints & placeholders
+        const idInput = document.getElementById("userId");
+        const parentHint = document.getElementById("parentHint");
+
+        if (role === "management") {
+          idInput.placeholder = "e.g. ADM001";
+          parentHint.style.display = "none";
+        } else if (role === "teacher") {
+          idInput.placeholder = "e.g. TCH001";
+          parentHint.style.display = "none";
+        } else if (role === "parent") {
+          idInput.placeholder = "e.g. PAR001";
+          parentHint.style.display = "block";
+        }
+      }
+
+      // Handle Form Submit
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const btn = this.querySelector('button[type="submit"]');
+          btn.disabled = true;
+          btn.innerHTML = "Connecting...";
+
+          const role = document.getElementById("loginRole").value;
+          const userId = document.getElementById("userId").value;
+          const password = document.getElementById("password").value;
+
+          const user = await Auth.login(userId, password, role);
+
+          if (user) {
+            showToast("Login successful! Redirecting...", "success");
+            setTimeout(() => {
+              window.location.href = `${role}/dashboard.html`;
+            }, 1000);
+          } else {
+            btn.disabled = false;
+            btn.innerHTML = `Login <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`;
+          }
+        });
+    </script>
+  </body>
+</html>

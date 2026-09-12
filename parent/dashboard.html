@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parent Dashboard | School System</title>
+    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="../css/parent-portal.css">
+</head>
+<body class="dashboard-layout">
+    <div class="sidebar-overlay"></div>
+    <aside class="sidebar flex-col">
+        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Parent<br><span class="text-primary text-sm">Portal</span></h2>
+        <nav class="flex-col w-full h-full">
+            <a href="dashboard.html" class="nav-link active">Dashboard Overview</a>
+            <a href="finance.html" class="nav-link">Fee Statement</a>
+            <a href="attendance.html" class="nav-link">Attendance Records</a>
+            <a href="timetable.html" class="nav-link">Student Timetable</a>
+            <a href="assignments.html" class="nav-link">Assignments</a>
+            <a href="results.html" class="nav-link">Term Results</a>
+            <div style="margin-top: auto;">
+                <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">Logout</button>
+            </div>
+        </nav>
+    </aside>
+
+    <main>
+        <div class="mobile-top-bar">
+            <button onclick="window.UI.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+            <span class="font-bold">Ward Overview</span>
+            <div style="width:24px;"></div>
+        </div>
+
+        <div class="p-8">
+            <header class="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl" id="studentName">--</h1>
+                    <p class="text-muted">Class: <span id="studentClass">--</span></p>
+                </div>
+                <select id="wardSelector" class="btn btn-outline" style="padding: 0.5rem; display:none;" onchange="switchWard(this.value)">
+                </select>
+            </header>
+
+            <div class="summary-grid">
+                <!-- Finance Summary (3-Columns) -->
+                <div class="card card-3">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="card-icon" style="background:rgba(239,68,68,0.1); color:#fca5a5;">💰</div>
+                            <h3>Financial Status</h3>
+                        </div>
+                        <a href="finance.html" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">Fee Statement</a>
+                    </div>
+                    <div id="financeSummary" class="flex gap-8 mt-4">
+                        <div class="flex-1"><div class="text-xs text-muted">Outstanding Balance</div><div class="text-xl font-bold text-danger" id="balanceDisplay">Ghc 0.00</div></div>
+                        <div class="flex-1"><div class="text-xs text-muted">Total Paid</div><div class="text-xl font-bold text-success" id="paidDisplay">Ghc 0.00</div></div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Assignments (2-Columns) -->
+                <div class="card card-2">
+                    <div class="card-icon" style="background:rgba(59,130,246,0.1); color:#93c5fd;">📝</div>
+                    <h3>Upcoming Assignments</h3>
+                    <div id="assignmentsPreview" class="preview-list">
+                        <p class="text-muted text-xs">Loading tasks...</p>
+                    </div>
+                </div>
+
+                <!-- Simple Link: Attendance -->
+                <a href="attendance.html" class="card card-1">
+                    <div class="card-icon" style="background:rgba(16,185,129,0.1); color:#6ee7b7;">📅</div>
+                    <h3>Attendance</h3>
+                    <p class="text-xs text-muted mt-2">Check daily presence and arrival times.</p>
+                </a>
+
+                <!-- Simple Link: Timetable -->
+                <a href="timetable.html" class="card card-1">
+                    <div class="card-icon">🏫</div>
+                    <h3>Timetable</h3>
+                    <p class="text-xs text-muted mt-2">View weekly lesson schedule.</p>
+                </a>
+
+                <!-- Simple Link: Results -->
+                <a href="results.html" class="card card-1">
+                    <div class="card-icon" style="background:rgba(139,92,246,0.1); color:#c4b5fd;">📊</div>
+                    <h3>Results</h3>
+                    <p class="text-xs text-muted mt-2">View term performance reports.</p>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        Auth.requireAuth(['parent']);
+        
+        async function loadDashboard(student) {
+            document.getElementById('studentName').textContent = student.name;
+            document.getElementById('studentClass').textContent = student.class_name;
+            localStorage.setItem('parentActiveStudent', JSON.stringify(student));
+
+            // Finance Summary
+            try {
+                const res = await ApiClient.request('parent.php', { action: 'get_financials', studentId: student.id });
+                const ledger = res.data || [];
+                let billed = 0, paid = 0;
+                ledger.forEach(e => { billed += parseFloat(e.amount_billed); paid += parseFloat(e.amount_paid); });
+                document.getElementById('balanceDisplay').textContent = `Ghc ${(billed - paid).toFixed(2)}`;
+                document.getElementById('paidDisplay').textContent = `Ghc ${paid.toFixed(2)}`;
+            } catch(e) {}
+
+            // Assignments Preview
+            try {
+                const res = await ApiClient.request('parent.php', { action: 'get_assignments', className: student.class_name });
+                const tasks = (res.data || []).slice(0, 3);
+                const container = document.getElementById('assignmentsPreview');
+                if (tasks.length === 0) container.innerHTML = '<p class="text-muted">No pending assignments.</p>';
+                else container.innerHTML = tasks.map(t => `
+                    <div class="preview-item">
+                        <span class="font-medium">${t.title}</span>
+                        <span class="text-muted">${new Date(t.due_date).toLocaleDateString()}</span>
+                    </div>
+                `).join('');
+            } catch(e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = Auth.getCurrentUser();
+            const res = await ApiClient.request('parent.php', { action: 'get_wards', parentId: user.id });
+            const wards = res.data || [];
+
+            if (wards.length > 0) {
+                if (wards.length > 1) {
+                    const sel = document.getElementById('wardSelector');
+                    sel.style.display = 'block';
+                    sel.innerHTML = wards.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+                }
+                loadDashboard(wards[0]);
+            }
+        });
+
+        window.switchWard = async function(id) {
+            const user = Auth.getCurrentUser();
+            const res = await ApiClient.request('parent.php', { action: 'get_wards', parentId: user.id });
+            const student = res.data.find(w => w.id === id);
+            if (student) loadDashboard(student);
+        };
+    </script>
+</body>
+</html>

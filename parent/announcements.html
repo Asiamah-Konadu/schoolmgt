@@ -1,0 +1,77 @@
+<![DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Announcements | Parent Portal</title>
+    <link rel="stylesheet" href="../css/index.css">
+    <style>
+        .dashboard-layout { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; }
+        .sidebar { background: var(--bg-glass); border-right: 1px solid var(--border-color); padding: 2rem 1rem; }
+        .nav-link { display: flex; align-items: center; padding: 0.75rem 1rem; color: var(--text-secondary); border-radius: var(--radius-md); margin-bottom: 0.5rem; transition: var(--transition); }
+        .nav-link:hover, .nav-link.active { background: var(--accent-glow); color: var(--text-primary); }
+    </style>
+</head>
+<body class="dashboard-layout">
+    <aside class="sidebar flex-col">
+        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Kings Accademy<br><span class="text-primary text-sm">Parent Portal</span></h2>
+        <nav class="flex-col w-full h-full"></nav>
+    </aside>
+
+    <main class="p-8">
+        <header class="mb-8">
+            <h1 class="text-2xl">School Announcements</h1>
+            <p class="text-muted">Stay updated with the latest news and circulars from the school management.</p>
+        </header>
+
+        <section class="max-w-4xl">
+            <div class="glass-panel p-6 animate-fade-in" style="max-height: 80vh; overflow-y: auto;">
+                <h2 class="mb-6">All Announcements</h2>
+                <div id="announcementsList" class="flex-col gap-4">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/parent-nav.js"></script>
+    <script>
+        Auth.requireAuth(['parent']);
+        renderParentSidebar();
+        
+        async function renderAnnouncements() {
+            const container = document.getElementById('announcementsList');
+            try {
+                const res = await ApiClient.request('management.php', { action: 'get_announcements' });
+                const list = res.data.filter(a => a.target_audience === 'both' || a.target_audience === 'parents');
+                container.innerHTML = '';
+                
+                if(list.length === 0) {
+                    container.innerHTML = '<p class="text-muted">No announcements found.</p>';
+                }
+
+                list.forEach(ann => {
+                    const el = document.createElement('div');
+                    el.className = 'glass-panel p-4';
+                    el.style.background = 'rgba(255,255,255,0.02)';
+                    el.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="text-primary m-0">${ann.title}</h4>
+                            <span class="text-xs text-muted px-2 py-1 rounded-full" style="background: var(--bg-secondary);">${ann.target_audience.toUpperCase()}</span>
+                        </div>
+                        <p class="text-sm text-secondary m-0 mb-2">${ann.content}</p>
+                        <div class="text-xs text-muted">
+                            ${new Date(ann.created_at).toLocaleDateString()}
+                        </div>
+                    `;
+                    container.appendChild(el);
+                });
+            } catch (err) {}
+        }
+
+        renderAnnouncements();
+    </script>
+</body>
+</html>

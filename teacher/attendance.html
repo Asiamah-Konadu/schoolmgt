@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Attendance | Teacher Portal</title>
+    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="../css/teacher-portal.css">
+</head>
+<body class="dashboard-layout">
+    <div class="sidebar-overlay"></div>
+    <aside class="sidebar flex-col">
+        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Teacher<br><span class="text-primary text-sm">Portal</span></h2>
+        <nav class="flex-col w-full h-full">
+            <a href="dashboard.html" class="nav-link">Dashboard Summary</a>
+            <a href="timetable.html" class="nav-link">My Timetable</a>
+            <a href="attendance.html" class="nav-link active">Class Attendance</a>
+            <a href="morning-attendance.html" class="nav-link" id="morningAttendanceTab" style="display:none;">Morning Attendance</a>
+            <a href="assignments.html" class="nav-link">Assignments</a>
+            <a href="results.html" class="nav-link">Exam Results</a>
+            <div style="margin-top: auto;">
+                <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">Logout</button>
+            </div>
+        </nav>
+    </aside>
+
+    <main>
+        <div class="mobile-top-bar">
+            <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+            <span class="font-bold">Attendance</span>
+            <div style="width:24px;"></div>
+        </div>
+
+        <div class="p-8">
+            <header class="mb-8">
+                <h1 class="text-2xl">Class Lesson Attendance</h1>
+                <p class="text-muted">Take attendance for your scheduled lessons. Submitting this will also mark you as present as the teacher.</p>
+            </header>
+
+            <section class="max-w-4xl grid gap-8">
+                <!-- Filter Form -->
+                <div class="glass-panel p-6 animate-fade-in">
+                    <form id="attendanceSelector" class="flex gap-4 items-end">
+                        <div class="form-group mb-0 flex-1">
+                            <label class="form-label">Select Class</label>
+                            <select id="classSelector" class="form-control" required>
+                                <option value="">-- Choose Class --</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-0 flex-1">
+                            <label class="form-label">Select Subject</label>
+                            <select id="subjectSelector" class="form-control" required>
+                                <option value="">-- Choose Subject --</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Load Roster</button>
+                    </form>
+                </div>
+
+                <!-- Roster Form -->
+                <div id="rosterContainer" class="glass-panel p-6 animate-fade-in delay-100" style="display: none;">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2>Student Roster</h2>
+                        <span class="text-sm text-success" id="autoPresentMsg">Note: Your attendance is marked automatically</span>
+                    </div>
+                    
+                    <form id="attendanceSubmitForm">
+                        <div style="overflow-x: auto; max-height: 50vh;" class="mb-6">
+                            <table class="w-full text-left" style="border-collapse: collapse;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--bg-glass);">
+                                        <th class="p-4 text-muted font-medium">Student ID</th>
+                                        <th class="p-4 text-muted font-medium">Student Name</th>
+                                        <th class="p-4 text-muted font-medium text-center">Present</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rosterBody">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-full">Submit Final Attendance</button>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        Auth.requireAuth(['teacher']);
+        
+        const user = Auth.getCurrentUser();
+        
+        if (user.assignedClass) {
+            document.getElementById('morningAttendanceTab').style.display = 'flex';
+        }
+
+        // Populate Selectors
+        document.addEventListener('DOMContentLoaded', async () => {
+            const subjects = Array.isArray(user.subjects) ? user.subjects : (user.subjects||'').split(',').map(s=>s.trim());
+            const subjectSelect = document.getElementById('subjectSelector');
+            subjects.forEach(sub => {
+                const opt = document.createElement('option');
+                opt.value = sub; opt.textContent = sub;
+                subjectSelect.appendChild(opt);
+            });
+
+            try {
+                const classRes = await ApiClient.request('teacher.php', { action: 'get_classes' });
+                const classSelect = document.getElementById('classSelector');
+                classRes.data.forEach(cls => {
+                    const opt = document.createElement('option');
+                    opt.value = cls; opt.textContent = cls;
+                    classSelect.appendChild(opt);
+                });
+            } catch(e) {}
+        });
+
+        let selectedConfig = {};
+
+        // Load Roster
+        document.getElementById('attendanceSelector').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            selectedConfig.class = document.getElementById('classSelector').value;
+            selectedConfig.subject = document.getElementById('subjectSelector').value;
+
+            try {
+                const rosterRes = await ApiClient.request('teacher.php', {
+                    action: 'get_roster',
+                    className: selectedConfig.class
+                });
+                
+                const students = rosterRes.data;
+                const tbody = document.getElementById('rosterBody');
+                tbody.innerHTML = '';
+                
+                if(students.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-muted">No students found in this class.</td></tr>';
+                } else {
+                    students.forEach(stu => {
+                        const tr = document.createElement('tr');
+                        tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                        tr.innerHTML = `
+                            <td class="p-4 font-bold text-primary">${stu.id}</td>
+                            <td class="p-4">${stu.name}</td>
+                            <td class="p-4 text-center">
+                                <input type="checkbox" class="checkbox-custom" data-student-id="${stu.id}" checked>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+                document.getElementById('rosterContainer').style.display = 'block';
+            } catch(e) {}
+        });
+
+        // Submit Attendance
+        document.getElementById('attendanceSubmitForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+
+            const checkboxes = document.querySelectorAll('.checkbox-custom');
+            const studentPayload = Array.from(checkboxes).map(cb => ({
+                id: cb.getAttribute('data-student-id'),
+                isPresent: cb.checked
+            }));
+
+            try {
+                await ApiClient.request('teacher.php', {
+                    action: 'submit_lesson_attendance',
+                    teacherId: user.id,
+                    className: selectedConfig.class,
+                    subject: selectedConfig.subject,
+                    students: studentPayload
+                });
+
+                showToast('Attendance successfully submitted! You have been marked present.', 'success');
+                document.getElementById('rosterContainer').style.display = 'none';
+            } catch (err) {}
+            btn.disabled = false;
+        });
+    </script>
+</body>
+</html>
