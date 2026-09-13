@@ -60,24 +60,11 @@
 </head>
 <body class="dashboard-layout">
     <div class="sidebar-overlay"></div>
-    <aside class="sidebar flex-col">
-        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Teacher<br><span class="text-primary text-sm">Portal</span></h2>
-        <nav class="flex-col w-full h-full">
-            <a href="dashboard.html" class="nav-link">Dashboard Summary</a>
-            <a href="timetable.html" class="nav-link">My Timetable</a>
-            <a href="attendance.html" class="nav-link">Class Attendance</a>
-            <a href="morning-attendance.html" class="nav-link" id="morningAttendanceTab" style="display:none;">Morning Attendance</a>
-            <a href="assignments.html" class="nav-link">Assignments</a>
-            <a href="results.html" class="nav-link active">Exam Results</a>
-            <div style="margin-top: auto;">
-                <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">Logout</button>
-            </div>
-        </nav>
-    </aside>
+    <aside class="sidebar flex-col"></aside>
 
     <main>
         <div class="mobile-top-bar">
-            <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+            <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" aria-label="Toggle menu">☰</button>
             <span class="font-bold">Exam Results</span>
             <div style="width:24px;"></div>
         </div>
@@ -174,15 +161,13 @@
         </div>
     </main>
 
+    <script src="../js/firebase-db.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
+    <script src="../js/teacher-nav.js"></script>
     <script>
         Auth.requireAuth(['teacher']);
         const user = Auth.getCurrentUser();
-
-        if (user.assignedClass) {
-            document.getElementById('morningAttendanceTab').style.display = 'flex';
-        }
 
         // Default academic year
         const now = new Date();
@@ -191,7 +176,7 @@
 
         // Prefill selectors
         document.addEventListener('DOMContentLoaded', async () => {
-            const subjects = Array.isArray(user.subjects) ? user.subjects : (user.subjects||'').split(',').map(s => s.trim());
+            const subjects = Array.isArray(user.subjects) ? user.subjects : (user.subjects||'').split(',').map(s => s.trim()).filter(Boolean);
             const subSel = document.getElementById('subjectSelector');
             subjects.forEach(s => {
                 const o = document.createElement('option'); o.value = s; o.textContent = s; subSel.appendChild(o);
@@ -279,7 +264,6 @@
                     <td style="text-align:center;"><span class="grade-badge ${ex.grade ? 'grade-'+ex.grade : ''}" id="grade-${stu.id}">${ex.grade || '—'}</span></td>
                 `;
                 tbody.appendChild(tr);
-                // trigger initial calc
                 if (ex.exam_score !== undefined) recalcRow(tr.querySelector('[data-field="exam"]'));
             });
         }
@@ -336,19 +320,18 @@
         // ── Submit Results ──────────────────────────────────────────────────
         window.submitResults = async function() {
             const btn = document.getElementById('submitResultsBtn');
+            const btn2 = document.getElementById('submitResultsBtn2');
             btn.disabled = true; btn.textContent = 'Saving...';
+            btn2.disabled = true;
 
             const rows = document.querySelectorAll('#scoreTableBody tr[data-student-id]');
             const records = [];
-
             let hasError = false;
-            let numValid = 0;
             
             rows.forEach(tr => {
                 const sid = tr.dataset.studentId;
                 const inputs = tr.querySelectorAll('.score-input');
                 
-                // Use 0 if the field is empty, but still check if it's a valid number between 0-100
                 const exam   = parseFloat(inputs[0].value) || 0;
                 const proj   = parseFloat(inputs[1].value) || 0;
                 const grp    = parseFloat(inputs[2].value) || 0;
@@ -365,18 +348,19 @@
                     group_score: grp, 
                     assignment_score: assign 
                 });
-                numValid++;
             });
 
             if (hasError) {
                 showToast('Some scores are out of range (0–100). Please fix them.', 'error');
                 btn.disabled = false; btn.textContent = '💾 Save All Results';
+                btn2.disabled = false;
                 return;
             }
             
             if (records.length === 0) {
                 showToast('No data to save.', 'error');
                 btn.disabled = false; btn.textContent = '💾 Save All Results';
+                btn2.disabled = false;
                 return;
             }
 
@@ -395,7 +379,7 @@
             }
 
             btn.disabled = false; btn.textContent = '💾 Save All Results';
-            document.getElementById('submitResultsBtn2').disabled = false;
+            btn2.disabled = false;
         };
     </script>
 </body>

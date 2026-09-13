@@ -3,30 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard | School System</title>
+    <title>Teacher Dashboard | Kings Academy</title>
+    <meta name="description" content="Teacher portal dashboard — view today's lessons, announcements, and quick links.">
     <link rel="stylesheet" href="../css/index.css">
     <link rel="stylesheet" href="../css/teacher-portal.css">
 </head>
 <body class="dashboard-layout">
     <div class="sidebar-overlay"></div>
-    <aside class="sidebar flex-col">
-        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Teacher<br><span class="text-primary text-sm">Portal</span></h2>
-        <nav class="flex-col w-full h-full">
-            <a href="dashboard.html" class="nav-link active">Dashboard Summary</a>
-            <a href="timetable.html" class="nav-link">My Timetable</a>
-            <a href="attendance.html" class="nav-link">Class Attendance</a>
-            <a href="morning-attendance.html" class="nav-link" id="morningAttendanceTab" style="display:none;">Morning Attendance</a>
-            <a href="assignments.html" class="nav-link">Assignments</a>
-            <a href="results.html" class="nav-link">Exam Results</a>
-            <div style="margin-top: auto;">
-                <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">Logout</button>
-            </div>
-        </nav>
-    </aside>
+    <aside class="sidebar flex-col"></aside>
 
     <main>
         <div class="mobile-top-bar">
-            <button onclick="window.UI.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+            <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" aria-label="Toggle menu">☰</button>
             <span class="font-bold">Dashboard</span>
             <div style="width:24px;"></div>
         </div>
@@ -82,29 +70,25 @@
                     <p class="text-xs text-muted mt-2">Post new tasks and check submissions.</p>
                 </a>
                 
-                <!-- Simple Link: Profile (Dummy) -->
-                <div class="card card-1">
-                    <div class="card-icon">👤</div>
-                    <h3>My Profile</h3>
-                    <p class="text-xs text-muted mt-2">Update your teacher profile information.</p>
-                </div>
+                <!-- Simple Link: Messages -->
+                <a href="messages.html" class="card card-1">
+                    <div class="card-icon" style="background: rgba(16,185,129,0.1); color: #6ee7b7;">💬</div>
+                    <h3>Messages</h3>
+                    <p class="text-xs text-muted mt-2">Communicate with parents of your students.</p>
+                </a>
             </div>
         </div>
     </main>
 
+    <script src="../js/firebase-db.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
+    <script src="../js/teacher-nav.js"></script>
     <script>
         Auth.requireAuth(['teacher']);
         
         document.addEventListener('DOMContentLoaded', async () => {
             const user = Auth.getCurrentUser();
-
-            // Show morning attendance if teacher has an assigned class
-            if (user.assignedClass) {
-                document.getElementById('morningAttendanceTab').style.display = 'flex';
-            }
-
             document.getElementById('teacherName').textContent = user.name;
 
             // Load Today's Lessons Summary

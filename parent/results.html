@@ -128,20 +128,7 @@
 </head>
 <body class="dashboard-layout">
     <div class="sidebar-overlay"></div>
-    <aside class="sidebar flex-col no-print">
-        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Kings Accademy<br><span class="text-primary text-sm">Parent Portal</span></h2>
-        <nav class="flex-col w-full h-full">
-            <a href="dashboard.html" class="nav-link">Dashboard Overview</a>
-            <a href="finance.html" class="nav-link">Fee Statement</a>
-            <a href="attendance.html" class="nav-link">Attendance Records</a>
-            <a href="timetable.html" class="nav-link">Student Timetable</a>
-            <a href="assignments.html" class="nav-link">Assignments</a>
-            <a href="results.html" class="nav-link active">Term Results</a>
-            <div style="margin-top: auto;">
-                <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">Logout</button>
-            </div>
-        </nav>
-    </aside>
+    <aside class="sidebar flex-col no-print"></aside>
 
     <main>
         <div class="mobile-top-bar no-print">
@@ -282,8 +269,10 @@
         </div>
     </main>
 
+    <script src="../js/firebase-db.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
+    <script src="../js/parent-nav.js"></script>
     <script>
         Auth.requireAuth(['parent']);
         const user = Auth.getCurrentUser();

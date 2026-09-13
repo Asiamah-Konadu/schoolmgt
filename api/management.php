@@ -19,10 +19,9 @@ try {
         FOREIGN KEY (parent_id) REFERENCES users(id) ON DELETE CASCADE
     )");
     
-    // Self-healing: Check and add missing columns to financials table
     $pdo->exec("ALTER TABLE financials ADD COLUMN IF NOT EXISTS term VARCHAR(50) AFTER amount_paid");
     $pdo->exec("ALTER TABLE financials ADD COLUMN IF NOT EXISTS academic_year VARCHAR(20) AFTER term");
-} catch (PDOException $e) { /* Tables/Columns already exist or creation failed */ }
+} catch (PDOException $e) {}
 
 if ($action === 'get_stats') {
     try {
@@ -85,12 +84,12 @@ elseif ($action === 'create_student_parent') {
         $stmt1->execute([
             ':id' => $pId,
             ':name' => $data->parentName,
-            ':pass' => $data->parentPhone, // password is phone
+            ':pass' => $data->parentPhone,
             ':phone' => $data->parentPhone
         ]);
 
         $sId = 'STU' . mt_rand(1000, 9999);
-        $stmt2 = $pdo->prepare("INSERT INTO students (id, name, class_name, parent_id) VALUES (:id, :name, :class_name, :pid)");
+        $stmt2 = $pdo->prepare("INSERT INTO students (id, name, class_name, parent_id, promotion_status) VALUES (:id, :name, :class_name, :pid, 'none')");
         $stmt2->execute([
             ':id' => $sId,
             ':name' => $data->studentName,
@@ -126,7 +125,6 @@ elseif ($action === 'get_students') {
 
 elseif ($action === 'delete_student') {
     try {
-        // FK constraint cascading will delete related students_parents records
         $stmt = $pdo->prepare("DELETE FROM students WHERE id = :id");
         $stmt->execute([':id' => $data->id]);
         echo json_encode(["status" => "success"]);
@@ -300,6 +298,102 @@ elseif ($action === 'delete_financial') {
     try {
         $stmt = $pdo->prepare("DELETE FROM financials WHERE id = :id");
         $stmt->execute([':id' => $data->id]);
+        echo json_encode(["status" => "success"]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+// ── PROMOTIONS ───────────────────────────────────────────────────────────
+elseif ($action === 'get_recommended_promotions') {
+    try {
+        $stmt = $pdo->query("SELECT id, name, class_name as class FROM students WHERE promotion_status = 'recommended' ORDER BY class_name, name");
+        echo json_encode(["status" => "success", "data" => $stmt->fetchAll()]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+elseif ($action === 'approve_promotion') {
+    try {
+        $nextClass = $data->nextClass ?? 'Promoted';
+        $stmt = $pdo->prepare("UPDATE students SET class_name = :cls, promotion_status = 'promoted' WHERE id = :sid");
+        $stmt->execute([':cls' => $nextClass, ':sid' => $data->studentId]);
+        echo json_encode(["status" => "success"]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+// ── MESSAGES ─────────────────────────────────────────────────────────────
+elseif ($action === 'get_messages') {
+    try {
+        $uid = $data->userId ?? '';
+        $stmt = $pdo->prepare("SELECT * FROM messages WHERE recipient_id = :uid ORDER BY created_at DESC");
+        $stmt->execute([':uid' => $uid]);
+        echo json_encode(["status" => "success", "data" => $stmt->fetchAll()]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+elseif ($action === 'get_sent_messages') {
+    try {
+        $uid = $data->userId ?? '';
+        $stmt = $pdo->prepare("SELECT * FROM messages WHERE sender_id = :uid ORDER BY created_at DESC");
+        $stmt->execute([':uid' => $uid]);
+        echo json_encode(["status" => "success", "data" => $stmt->fetchAll()]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+elseif ($action === 'get_recipients') {
+    try {
+        $stmt = $pdo->query("SELECT id, name, role FROM users ORDER BY role, name");
+        echo json_encode(["status" => "success", "data" => $stmt->fetchAll()]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+elseif ($action === 'send_message') {
+    try {
+        $id = 'MSG' . mt_rand(10000, 99999);
+        $sStmt = $pdo->prepare("SELECT name, role FROM users WHERE id = :uid");
+        $sStmt->execute([':uid' => $data->senderId]);
+        $sender = $sStmt->fetch() ?: ['name' => $data->senderId, 'role' => 'user'];
+
+        $rStmt = $pdo->prepare("SELECT name, role FROM users WHERE id = :uid");
+        $rStmt->execute([':uid' => $data->recipientId]);
+        $recipient = $rStmt->fetch() ?: ['name' => $data->recipientId, 'role' => 'user'];
+
+        $stmt = $pdo->prepare("
+            INSERT INTO messages (id, sender_id, sender_name, sender_role, recipient_id, recipient_name, recipient_role, subject, message)
+            VALUES (:id, :sid, :sname, :srole, :rid, :rname, :rrole, :subj, :msg)
+        ");
+        $stmt->execute([
+            ':id' => $id,
+            ':sid' => $data->senderId,
+            ':sname' => $sender['name'],
+            ':srole' => $sender['role'],
+            ':rid' => $data->recipientId,
+            ':rname' => $recipient['name'],
+            ':rrole' => $recipient['role'],
+            ':subj' => $data->subject,
+            ':msg' => $data->message
+        ]);
+        echo json_encode(["status" => "success", "id" => $id]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+elseif ($action === 'mark_message_read') {
+    try {
+        $msgId = $data->messageId ?? $data->id;
+        $stmt = $pdo->prepare("UPDATE messages SET is_read = 1 WHERE id = :id");
+        $stmt->execute([':id' => $msgId]);
         echo json_encode(["status" => "success"]);
     } catch (PDOException $e) {
         echo json_encode(["status" => "error", "message" => $e->getMessage()]);

@@ -3,26 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>School Management System | Login</title>
+    <title>Kings Academy International | Portal Login</title>
     <meta
       name="description"
-      content="Login portal for the School Management System"
+      content="Unified login portal for Kings Academy International students, parents, teachers, and administrators."
     />
     <link rel="stylesheet" href="css/index.css" />
     <style>
+      .login-container {
+        width: 100%;
+        max-width: 440px;
+        margin: 2rem auto;
+      }
       .role-selector-container {
         display: flex;
-        justify-content: space-between;
-        gap: 0.5rem;
-        background: rgba(15, 23, 42, 0.4);
+        gap: 0.35rem;
+        background: rgba(10, 14, 26, 0.6);
         border: 1px solid var(--border-color);
         border-radius: var(--radius-full);
+        padding: 0.3rem;
+        margin-bottom: 1.75rem;
       }
       .role-btn {
         flex: 1;
-        padding: 0.65rem 1rem;
+        padding: 0.65rem 0.75rem;
         border-radius: var(--radius-full);
-        font-size: 0.875rem;
+        font-size: 0.85rem;
         font-weight: 600;
         border: none;
         background: transparent;
@@ -30,43 +36,66 @@
         cursor: pointer;
         transition: var(--transition);
         white-space: nowrap;
+        text-align: center;
       }
       .role-btn:hover:not(.active) {
         color: var(--text-primary);
         background: rgba(255, 255, 255, 0.05);
       }
       .role-btn.active {
-        background: var(--accent-primary);
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
         color: white;
-        box-shadow: 0 4px 12px var(--border-glow);
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+      }
+      .demo-chip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.75rem;
+        border-radius: var(--radius-sm);
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        font-size: 0.775rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: var(--transition);
+        margin-bottom: 0.35rem;
+      }
+      .demo-chip:hover {
+        background: rgba(99, 102, 241, 0.15);
+        border-color: rgba(99, 102, 241, 0.4);
+        color: var(--text-primary);
+        transform: translateX(2px);
+      }
+      .demo-chip code {
+        font-family: monospace;
+        color: #818cf8;
       }
     </style>
   </head>
-  <body class="flex items-center justify-center min-h-screen">
-    <main class="w-full max-w-md p-4 animate-fade-in">
-      <div class="glass-panel p-8 text-center">
-        <div class="mb-8">
-          <!-- Simple Logo / Icon placeholder -->
+  <body class="flex items-center justify-center min-h-screen p-4">
+    <main class="login-container animate-fade-in">
+      <div class="glass-panel p-8">
+        
+        <!-- Header / Logo -->
+        <div class="text-center mb-6">
           <div
             style="
-              width: 60px;
-              height: 60px;
-              background: linear-gradient(
-                135deg,
-                var(--accent-primary),
-                #8b5cf6
-              );
+              width: 64px;
+              height: 64px;
+              background: linear-gradient(135deg, #4f46e5, #8b5cf6);
               border-radius: var(--radius-lg);
-              margin: 0 auto;
+              margin: 0 auto 1rem;
               display: flex;
               align-items: center;
               justify-content: center;
-              box-shadow: var(--shadow-glow);
+              box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);
+              border: 1px solid rgba(255, 255, 255, 0.2);
             "
           >
             <svg
-              width="32"
-              height="32"
+              width="34"
+              height="34"
               viewBox="0 0 24 24"
               fill="none"
               stroke="white"
@@ -78,48 +107,53 @@
               <path d="M6 12v5c3 3 9 3 12 0v-5" />
             </svg>
           </div>
-          <h1 class="mt-4" style="font-size: 1.5rem">Kings Accademy International</h1>
-          <p class="text-secondary text-sm">Access Your Portal</p>
+          <h1 style="font-size: 1.5rem; margin-bottom: 0.25rem;">Kings Academy International</h1>
+          <p class="text-secondary text-sm">Unified Portal Gateway</p>
         </div>
 
-        <!-- Role Selection Segmented Control -->
-        <div class="role-selector-container mb-6 p-1">
+        <!-- Role Selection Tabs -->
+        <div class="role-selector-container">
           <button
+            type="button"
             class="role-btn active"
             onclick="switchRole('management', this)"
           >
-            Admin
+            🛡️ Admin
           </button>
           <button
+            type="button"
             class="role-btn"
             onclick="switchRole('teacher', this)"
           >
-            Teacher
+            👨‍🏫 Teacher
           </button>
           <button
+            type="button"
             class="role-btn"
             onclick="switchRole('parent', this)"
           >
-            Parent
+            👨‍👩‍👦 Parent
           </button>
         </div>
 
+        <!-- Form -->
         <form id="loginForm" class="text-left">
           <input type="hidden" id="loginRole" value="management" />
 
-          <div class="form-group animate-fade-in">
-            <label class="form-label" for="userId">Username, ID or Email</label>
+          <div class="form-group">
+            <label class="form-label" for="userId" id="userIdLabel">Admin ID or Email</label>
             <input
               type="text"
               id="userId"
               class="form-control"
-              placeholder="e.g. ADM001"
+              placeholder="e.g. ADM001 or admin@school.edu"
               required
+              autocomplete="username"
             />
           </div>
 
-          <div class="form-group animate-fade-in delay-100">
-            <label class="form-label" for="password">Password</label>
+          <div class="form-group">
+            <label class="form-label" for="password" id="pwdLabel">Password</label>
             <div style="position: relative">
               <input
                 type="password"
@@ -127,7 +161,8 @@
                 class="form-control"
                 placeholder="••••••••"
                 required
-                style="padding-right: 3rem"
+                autocomplete="current-password"
+                style="padding-right: 2.75rem"
               />
               <button
                 type="button"
@@ -145,8 +180,7 @@
                   color: var(--text-muted);
                   display: flex;
                   align-items: center;
-                  padding: 0;
-                  transition: color 0.2s;
+                  padding: 4px;
                 "
               >
                 <!-- Eye Open -->
@@ -177,12 +211,8 @@
                   stroke-linejoin="round"
                   style="display: none"
                 >
-                  <path
-                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
-                  />
-                  <path
-                    d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
-                  />
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
                   <line x1="1" y1="1" x2="23" y2="23" />
                 </svg>
               </button>
@@ -190,20 +220,22 @@
             <div
               id="parentHint"
               class="text-muted text-xs mt-2"
-              style="display: none"
+              style="display: none; color: #818cf8;"
             >
-              Parents: Use your Phone Number as the password
+              💡 Parents: Use your registered Phone Number as the password
             </div>
           </div>
 
           <button
             type="submit"
-            class="btn btn-primary w-full mt-4 animate-fade-in delay-200"
+            id="submitBtn"
+            class="btn btn-primary w-full mt-4"
+            style="padding: 0.75rem;"
           >
-            Login
+            <span>Sign In to Portal</span>
             <svg
-              width="20"
-              height="20"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -218,28 +250,40 @@
           </button>
         </form>
 
-        <div
-          class="mt-6 pt-6 border-t"
-          style="border-top: 1px solid var(--border-color)"
-        >
-          <p class="text-xs text-muted mb-0">Democredentials:</p>
-          <p class="text-xs text-muted">Admin: ADM001 / password123</p>
-          <p class="text-xs text-muted">Teacher: TCH001 / password123</p>
-          <p class="text-xs text-muted">Parent: PAR001 / 555-0101</p>
+        <!-- Interactive Quick-Fill Demo Chips -->
+        <div class="mt-6 pt-5" style="border-top: 1px solid var(--border-color)">
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-xs text-muted font-bold uppercase tracking-wider">⚡ Quick Demo Login (Click to fill)</span>
+          </div>
+          
+          <div class="demo-chip" onclick="fillDemo('management', 'ADM001', 'password123')">
+            <span>🛡️ <strong>Admin</strong></span>
+            <code>ADM001 / password123</code>
+          </div>
+
+          <div class="demo-chip" onclick="fillDemo('teacher', 'TCH001', 'password123')">
+            <span>👨‍🏫 <strong>Teacher</strong> (Jane)</span>
+            <code>TCH001 / password123</code>
+          </div>
+
+          <div class="demo-chip" onclick="fillDemo('parent', 'PAR001', '555-0101')">
+            <span>👨‍👩‍👦 <strong>Parent</strong> (Michael)</span>
+            <code>PAR001 / 555-0101</code>
+          </div>
         </div>
+
       </div>
     </main>
 
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script>
-      // Check if already logged in
+      // Redirect if logged in
       const currentUser = Auth.getCurrentUser();
-      if (currentUser) {
+      if (currentUser && currentUser.role) {
         window.location.href = currentUser.role + "/dashboard.html";
       }
 
-      // Password Visibility Toggle
       function togglePwdVisibility() {
         const pwdInput = document.getElementById("password");
         const eyeOpen = document.getElementById("eyeOpen");
@@ -249,64 +293,77 @@
         pwdInput.type = isHidden ? "text" : "password";
         eyeOpen.style.display = isHidden ? "none" : "block";
         eyeClosed.style.display = isHidden ? "block" : "none";
-        btn.style.color = isHidden
-          ? "var(--accent-primary)"
-          : "var(--text-muted)";
+        btn.style.color = isHidden ? "#818cf8" : "var(--text-muted)";
       }
 
-      // Handle Role Switching
       function switchRole(role, btnEl) {
         document.getElementById("loginRole").value = role;
 
-        // Update Tab Styles
         const parent = btnEl.parentElement;
         parent.querySelectorAll(".role-btn").forEach((btn) => {
           btn.classList.remove("active");
         });
         btnEl.classList.add("active");
 
-        // Update hints & placeholders
         const idInput = document.getElementById("userId");
+        const idLabel = document.getElementById("userIdLabel");
         const parentHint = document.getElementById("parentHint");
 
         if (role === "management") {
-          idInput.placeholder = "e.g. ADM001";
+          idLabel.textContent = "Admin ID or Email";
+          idInput.placeholder = "e.g. ADM001 or admin@school.edu";
           parentHint.style.display = "none";
         } else if (role === "teacher") {
-          idInput.placeholder = "e.g. TCH001";
+          idLabel.textContent = "Teacher ID or Email";
+          idInput.placeholder = "e.g. TCH001 or jane.smith@school.edu";
           parentHint.style.display = "none";
         } else if (role === "parent") {
-          idInput.placeholder = "e.g. PAR001";
+          idLabel.textContent = "Parent ID or Phone Number";
+          idInput.placeholder = "e.g. PAR001 or 555-0101";
           parentHint.style.display = "block";
         }
       }
 
-      // Handle Form Submit
-      document
-        .getElementById("loginForm")
-        .addEventListener("submit", async function (e) {
-          e.preventDefault();
+      function fillDemo(role, userId, password) {
+        const roleBtns = document.querySelectorAll('.role-btn');
+        let targetBtn = roleBtns[0];
+        if (role === 'teacher') targetBtn = roleBtns[1];
+        if (role === 'parent') targetBtn = roleBtns[2];
+        
+        switchRole(role, targetBtn);
+        document.getElementById("userId").value = userId;
+        document.getElementById("password").value = password;
+        showToast(`Filled ${role} demo credentials. Click Sign In!`, 'info');
+      }
 
-          const btn = this.querySelector('button[type="submit"]');
-          btn.disabled = true;
-          btn.innerHTML = "Connecting...";
+      document.getElementById("loginForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
 
-          const role = document.getElementById("loginRole").value;
-          const userId = document.getElementById("userId").value;
-          const password = document.getElementById("password").value;
+        const btn = document.getElementById("submitBtn");
+        btn.disabled = true;
+        btn.innerHTML = `<span>Connecting...</span>`;
 
+        const role = document.getElementById("loginRole").value;
+        const userId = document.getElementById("userId").value;
+        const password = document.getElementById("password").value;
+
+        try {
           const user = await Auth.login(userId, password, role);
 
           if (user) {
             showToast("Login successful! Redirecting...", "success");
             setTimeout(() => {
-              window.location.href = `${role}/dashboard.html`;
-            }, 1000);
+              window.location.href = `${user.role}/dashboard.html`;
+            }, 800);
           } else {
             btn.disabled = false;
-            btn.innerHTML = `Login <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`;
+            btn.innerHTML = `<span>Sign In to Portal</span> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`;
           }
-        });
+        } catch (err) {
+          btn.disabled = false;
+          btn.innerHTML = `<span>Sign In to Portal</span> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`;
+        }
+      });
     </script>
   </body>
 </html>

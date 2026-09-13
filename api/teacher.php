@@ -11,7 +11,6 @@ $action = $data->action;
 $teacher_id = $data->teacherId ?? '';
 
 if ($action === 'get_classes') {
-    // Get unique classes from students for selection
     try {
         $stmt = $pdo->query("SELECT DISTINCT class_name FROM students ORDER BY class_name");
         echo json_encode(["status" => "success", "data" => $stmt->fetchAll(PDO::FETCH_COLUMN)]);
@@ -62,7 +61,6 @@ elseif ($action === 'submit_lesson_attendance') {
         $pdo->beginTransaction();
         $date = date('Y-m-d');
         
-        // Mark teacher present
         $stmt0 = $pdo->prepare("INSERT INTO teacher_attendance (teacher_id, class_name, subject, date) VALUES (:tid, :cls, :sub, :date)");
         $stmt0->execute([
             ':tid' => $teacher_id,
@@ -71,7 +69,6 @@ elseif ($action === 'submit_lesson_attendance') {
             ':date' => $date
         ]);
 
-        // Mark students
         $stmt1 = $pdo->prepare("INSERT INTO attendance (student_id, type, subject, teacher_id, is_present, date) VALUES (:sid, 'lesson', :sub, :tid, :present, :date)");
         
         foreach($data->students as $student) {
@@ -95,16 +92,13 @@ elseif ($action === 'submit_lesson_attendance') {
 elseif ($action === 'submit_morning_attendance') {
     try {
         $date = date('Y-m-d');
-        // Mark student as arrived
         $stmt1 = $pdo->prepare("INSERT INTO attendance (student_id, type, teacher_id, is_present, date) VALUES (:sid, 'morning', :tid, 1, :date)");
-        
         $stmt1->execute([
             ':sid' => $data->studentId,
             ':tid' => $teacher_id,
             ':date' => $date
         ]);
         
-        // For simulation, we'd fire an SMS gateway here. We fetch phone to return it to UI
         $phoneStmt = $pdo->prepare("SELECT u.phone FROM users u JOIN students_parents sp ON u.id = sp.parent_id WHERE sp.student_id = :sid LIMIT 1");
         $phoneStmt->execute([':sid' => $data->studentId]);
         $phone = $phoneStmt->fetchColumn();
@@ -148,6 +142,103 @@ elseif ($action === 'delete_assignment') {
     try {
         $stmt = $pdo->prepare("DELETE FROM assignments WHERE id = :id AND teacher_id = :tid");
         $stmt->execute([':id' => $data->id, ':tid' => $teacher_id]);
+        echo json_encode(["status" => "success"]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+// ── PROMOTIONS ───────────────────────────────────────────────────────────
+elseif ($action === 'get_promotion_list') {
+    try {
+        $stmt = $pdo->prepare("SELECT id, name, class_name as class, COALESCE(promotion_status, 'none') as promotion_status FROM students WHERE class_name = :cls ORDER BY name");
+        $stmt->execute([':cls' => $data->className]);
+        echo json_encode(["status" => "success", "data" => $stmt->fetchAll()]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+elseif ($action === 'recommend_promotion') {
+    try {
+        $stmt = $pdo->prepare("UPDATE students SET promotion_status = 'recommended' WHERE id = :sid");
+        $stmt->execute([':sid' => $data->studentId]);
+        echo json_encode(["status" => "success"]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+// ── MESSAGES ─────────────────────────────────────────────────────────────
+elseif ($action === 'get_messages') {
+    try {
+        $uid = $teacher_id ?: ($data->userId ?? '');
+        $stmt = $pdo->prepare("SELECT * FROM messages WHERE recipient_id = :uid ORDER BY created_at DESC");
+        $stmt->execute([':uid' => $uid]);
+        echo json_encode(["status" => "success", "data" => $stmt->fetchAll()]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+elseif ($action === 'get_sent_messages') {
+    try {
+        $uid = $teacher_id ?: ($data->userId ?? '');
+        $stmt = $pdo->prepare("SELECT * FROM messages WHERE sender_id = :uid ORDER BY created_at DESC");
+        $stmt->execute([':uid' => $uid]);
+        echo json_encode(["status" => "success", "data" => $stmt->fetchAll()]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+elseif ($action === 'get_recipients') {
+    try {
+        // Teacher sends to parents
+        $stmt = $pdo->query("SELECT id, name, role FROM users WHERE role = 'parent' ORDER BY name");
+        echo json_encode(["status" => "success", "data" => $stmt->fetchAll()]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+elseif ($action === 'send_message') {
+    try {
+        $id = 'MSG' . mt_rand(10000, 99999);
+        $sStmt = $pdo->prepare("SELECT name, role FROM users WHERE id = :uid");
+        $sStmt->execute([':uid' => $teacher_id ?: $data->senderId]);
+        $sender = $sStmt->fetch() ?: ['name' => 'Teacher', 'role' => 'teacher'];
+
+        $rStmt = $pdo->prepare("SELECT name, role FROM users WHERE id = :uid");
+        $rStmt->execute([':uid' => $data->recipientId]);
+        $recipient = $rStmt->fetch() ?: ['name' => 'Parent', 'role' => 'parent'];
+
+        $stmt = $pdo->prepare("
+            INSERT INTO messages (id, sender_id, sender_name, sender_role, recipient_id, recipient_name, recipient_role, subject, message)
+            VALUES (:id, :sid, :sname, :srole, :rid, :rname, :rrole, :subj, :msg)
+        ");
+        $stmt->execute([
+            ':id' => $id,
+            ':sid' => $teacher_id ?: $data->senderId,
+            ':sname' => $sender['name'],
+            ':srole' => $sender['role'],
+            ':rid' => $data->recipientId,
+            ':rname' => $recipient['name'],
+            ':rrole' => $recipient['role'],
+            ':subj' => $data->subject,
+            ':msg' => $data->message
+        ]);
+        echo json_encode(["status" => "success", "id" => $id]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
+elseif ($action === 'mark_message_read') {
+    try {
+        $msgId = $data->messageId ?? $data->id;
+        $stmt = $pdo->prepare("UPDATE messages SET is_read = 1 WHERE id = :id");
+        $stmt->execute([':id' => $msgId]);
         echo json_encode(["status" => "success"]);
     } catch (PDOException $e) {
         echo json_encode(["status" => "error", "message" => $e->getMessage()]);

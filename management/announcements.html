@@ -3,129 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Announcements | School System</title>
+    <title>Announcements | Kings Academy Management</title>
     <link rel="stylesheet" href="../css/index.css">
-    <style>
-        .dashboard-layout { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; font-size: small; }
-        .sidebar { background: var(--bg-glass); border-right: 1px solid var(--border-color); padding: 2rem 1rem; }
-        .nav-link { display: flex; align-items: center; padding: 0.75rem 1rem; color: var(--text-secondary); border-radius: var(--radius-md); margin-bottom: 0.5rem; transition: var(--transition); }
-        .nav-link:hover, .nav-link.active { background: var(--accent-glow); color: var(--text-primary); }
-     .mobile-top-bar { 
-  display: none; 
-  padding: 1rem; 
-  background: var(--bg-glass); 
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-color); 
-  align-items: center; 
-  justify-content: space-between; 
-  position: sticky; 
-  top: 0; 
-  z-index: 100; 
-}
-
-.sidebar-overlay { 
-  display: none; 
-  position: fixed; 
-  inset: 0; 
-  background: rgba(0,0,0,0.5); 
-  z-index: 900; 
-  backdrop-filter: blur(4px); 
-}
-
-/* Summary Grid System */
-.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
-.card-1 { grid-column: span 1; }
-.card-2 { grid-column: span 2; }
-.card-3 { grid-column: span 3; }
-
-@media (max-width: 425px) {
-    .dashboard-layout { grid-template-columns: 1fr; }
-    .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 280px; z-index: 1000; transform: translateX(-100%); }
-    .sidebar.active { transform: translateX(0); }
-    .mobile-top-bar { display: flex; }
-    .p-8 { padding: 1.5rem; }
-}
-
-@media (max-width: 425px) {
-    .summary-grid { grid-template-columns: 1fr; }
-    .card-2, .card-3 { grid-column: span 1; }
-}
-    </style>
-  </head>
-  <body class="dashboard-layout">
+</head>
+<body class="dashboard-layout">
     <div class="sidebar-overlay"></div>
-    <aside class="sidebar flex-col">
-      <h2 class="text-center mb-8" style="font-size: 1.25rem">
-        Kings Accademy<br /><span class="text-primary text-sm">Management</span>
-      </h2>
-
-      <nav class="flex-col w-full h-full">
-        <a href="dashboard.html" class="nav-link">Dashboard</a>
-        <a href="announcements.html" class="nav-link active">Announcements</a>
-        <a href="students.html" class="nav-link">Students & Parents</a>
-        <a href="teachers.html" class="nav-link">Teachers</a>
-        <a href="timetable.html" class="nav-link">Timetable Import</a>
-        <a href="results.html" class="nav-link">Results Manager</a>
-        <a href="finance.html" class="nav-link">Finance Manager</a>
-
-        <div style="margin-top: auto">
-          <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">
-            Logout
-          </button>
-        </div>
-      </nav>
-    </aside>
+    <aside class="sidebar"></aside>
 
     <main>
       <div class="mobile-top-bar">
-        <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
-        <span class="font-bold">Admin Dashboard</span>
-        <div style="width:24px;"></div>
+        <button class="mobile-menu-btn" onclick="window.UI?.toggleSidebar()">☰</button>
+        <span class="font-bold">Announcements</span>
+        <div style="width:38px;"></div>
       </div>
-          <header class="mb-8">
-            <h1 class="text-2xl">Public Announcements</h1>
-            <p class="text-muted">Create announcements for Teachers, Parents, or Both.</p>
+
+      <div class="p-8">
+        <header class="mb-8">
+            <h1 class="text-2xl">Broadcasts &amp; Announcements</h1>
+            <p class="text-muted">Publish notifications to Teachers, Parents, or the entire school community.</p>
         </header>
 
-        <section class="max-w-4xl grid grid-cols-1 gap-8" style="display: grid; grid-template-columns: 1fr 1fr;">
+        <section class="max-w-6xl grid gap-8" style="display: grid; grid-template-columns: 1fr 1.5fr;">
             
             <!-- Create Form -->
-            <div class="glass-panel p-6 animate-fade-in">
-                <h2 class="mb-6">New Announcement</h2>
+            <div class="glass-panel p-6 animate-fade-in" style="height: fit-content;">
+                <h2 class="mb-5">📢 Create Broadcast</h2>
                 <form id="announcementForm">
                     <div class="form-group">
                         <label class="form-label" for="title">Announcement Title</label>
-                        <input type="text" id="title" class="form-control" required>
+                        <input type="text" id="title" class="form-control" placeholder="e.g. End of Term Examination Timetable" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="target">Target Audience</label>
                         <select id="target" class="form-control" required>
-                            <option value="both">Both (Teachers & Parents)</option>
+                            <option value="both">Both (Teachers &amp; Parents)</option>
                             <option value="teachers">Teachers Only</option>
                             <option value="parents">Parents Only</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="content">Message Content</label>
-                        <textarea id="content" class="form-control" rows="5" required style="resize: vertical;"></textarea>
+                        <textarea id="content" class="form-control" rows="5" placeholder="Type announcement details here..." required style="resize: vertical;"></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary w-full">Broadcast Announcement</button>
+                    <button type="submit" id="submitAnnBtn" class="btn btn-primary w-full mt-2">Publish Announcement</button>
                 </form>
             </div>
 
             <!-- List View -->
             <div class="glass-panel p-6 animate-fade-in delay-100" style="max-height: 80vh; overflow-y: auto;">
-                <h2 class="mb-6">Past Announcements</h2>
+                <div class="flex justify-between items-center mb-5">
+                    <h2>Active Broadcasts</h2>
+                    <span id="annCount" class="text-xs text-muted"></span>
+                </div>
                 <div id="announcementsList" class="flex-col gap-4">
-                    <!-- Populated via JS -->
+                    <p class="text-muted text-sm py-4">Loading announcements...</p>
                 </div>
             </div>
 
         </section>
+      </div>
     </main>
 
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
+    <script src="../js/management-nav.js"></script>
     <script>
         Auth.requireAuth(['management']);
         
@@ -133,37 +74,45 @@
             const container = document.getElementById('announcementsList');
             try {
                 const res = await ApiClient.request('management.php', { action: 'get_announcements' });
-                const list = res.data;
+                const list = res.data || [];
                 container.innerHTML = '';
+                document.getElementById('annCount').textContent = `${list.length} published`;
                 
-                if(list.length === 0) {
-                    container.innerHTML = '<p class="text-muted">No announcements found.</p>';
+                if (list.length === 0) {
+                    container.innerHTML = '<p class="text-muted text-center py-6">No announcements published yet.</p>';
+                    return;
                 }
 
                 list.forEach(ann => {
                     const el = document.createElement('div');
-                    el.className = 'glass-panel p-4';
+                    el.className = 'preview-item flex-col items-start gap-2';
                     el.style.background = 'rgba(255,255,255,0.02)';
+                    
+                    const audColor = ann.target_audience === 'teachers' ? 'badge-warning' : (ann.target_audience === 'parents' ? 'badge-success' : 'badge-primary');
+                    
                     el.innerHTML = `
-                        <div class="flex justify-between items-start mb-2">
+                        <div class="flex justify-between items-center w-full">
                             <h4 class="text-primary m-0">${ann.title}</h4>
-                            <span class="text-xs text-muted px-2 py-1 rounded-full" style="background: var(--bg-secondary);">${ann.target_audience.toUpperCase()}</span>
+                            <span class="badge ${audColor} uppercase">${ann.target_audience}</span>
                         </div>
-                        <p class="text-sm text-secondary m-0 mb-2">${ann.content}</p>
-                        <div class="flex justify-between items-center text-xs text-muted">
-                            <span>${new Date(ann.created_at).toLocaleDateString()}</span>
-                            <button onclick="deleteAnnouncement('${ann.id}')" class="text-danger" style="background:none;border:none;cursor:pointer;">Delete</button>
+                        <p class="text-sm text-secondary m-0 mb-1" style="line-height:1.5;">${ann.content}</p>
+                        <div class="flex justify-between items-center w-full text-xs text-muted pt-2 border-t" style="border-color: rgba(255,255,255,0.05);">
+                            <span>📅 ${new Date(ann.created_at).toLocaleDateString()}</span>
+                            <button onclick="deleteAnnouncement('${ann.id}')" class="text-danger" style="background:none;border:none;cursor:pointer;font-weight:600;font-size:0.75rem;">🗑 Delete</button>
                         </div>
                     `;
                     container.appendChild(el);
                 });
-            } catch (err) {}
+            } catch (err) {
+                container.innerHTML = '<p class="text-danger text-center py-6">Failed to load announcements.</p>';
+            }
         }
 
         document.getElementById('announcementForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
+            const btn = document.getElementById('submitAnnBtn');
             btn.disabled = true;
+            btn.textContent = 'Publishing...';
             
             const title = document.getElementById('title').value;
             const target = document.getElementById('target').value;
@@ -174,22 +123,23 @@
                     action: 'create_announcement',
                     title, target, content
                 });
-                showToast('Announcement broadcasted successfully!', 'success');
+                showToast('Announcement published successfully!', 'success');
                 e.target.reset();
                 renderAnnouncements();
             } catch (err) {}
             btn.disabled = false;
+            btn.textContent = 'Publish Announcement';
         });
 
         window.deleteAnnouncement = async function(id) {
-            if(confirm('Delete this announcement?')) {
+            if (confirm('Delete this announcement?')) {
                 try {
                     await ApiClient.request('management.php', { action: 'delete_announcement', id });
-                    showToast('Deleted.', 'success');
+                    showToast('Deleted announcement.', 'success');
                     renderAnnouncements();
                 } catch (err) {}
             }
-        }
+        };
 
         renderAnnouncements();
     </script>

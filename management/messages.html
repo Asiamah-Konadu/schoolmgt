@@ -3,71 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messages | School System</title>
+    <title>Messages | Kings Academy Management</title>
     <link rel="stylesheet" href="../css/index.css">
     <style>
-        .dashboard-layout { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; font-size: small;}
-        .sidebar { background: var(--bg-glass); border-right: 1px solid var(--border-color); padding: 2rem 1rem; }
-        .nav-link { display: flex; align-items: center; padding: 0.75rem 1rem; color: var(--text-secondary); border-radius: var(--radius-md); margin-bottom: 0.5rem; transition: var(--transition); }
-        .nav-link:hover, .nav-link.active { background: var(--accent-glow); color: var(--text-primary); }
-        .tab-btn { background: none; border: 1px solid var(--border-color); color: var(--text-secondary); border-radius: var(--radius-md); padding: 0.5rem 1rem; margin-right: 0.5rem; cursor: pointer; transition: var(--transition); }
-        .tab-btn.active { background: var(--accent-primary); color: white; border-color: var(--accent-primary); }
-        .message-item { padding: 1rem; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md); margin-bottom: 0.5rem; cursor: pointer; transition: var(--transition); }
-        .message-item:hover { background: rgba(255,255,255,0.05); }
-        .message-item.unread { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); }
-        .compose-form { display: none; }
+        .tabs-header {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+        .tab-btn {
+            padding: 0.65rem 1.25rem;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            transition: var(--transition);
+        }
+        .tab-btn.active {
+            color: #818cf8;
+            border-bottom-color: #6366f1;
+        }
+        .msg-card {
+            padding: 1rem 1.25rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--bg-card);
+        }
+        .msg-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
+        }
+        .msg-card.unread {
+            background: rgba(79, 70, 229, 0.12);
+            border-color: rgba(99, 102, 241, 0.4);
+        }
     </style>
 </head>
 <body class="dashboard-layout">
-    <aside class="sidebar flex-col">
-        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Management<br><span class="text-primary text-sm">Portal</span></h2>
-        <nav class="flex-col w-full h-full"></nav>
-    </aside>
+    <div class="sidebar-overlay"></div>
+    <aside class="sidebar"></aside>
 
-    <main class="p-8">
+    <main>
+      <div class="mobile-top-bar">
+        <button class="mobile-menu-btn" onclick="window.UI?.toggleSidebar()">☰</button>
+        <span class="font-bold">Messages</span>
+        <div style="width:38px;"></div>
+      </div>
+
+      <div class="p-8">
         <header class="mb-8">
-            <h1 class="text-2xl">Messaging System</h1>
-            <p class="text-muted">Communicate with parents and teachers.</p>
+            <h1 class="text-2xl">Internal Messaging Center</h1>
+            <p class="text-muted">Direct communication channel with teachers, staff, and parents.</p>
         </header>
 
-        <section class="max-w-6xl">
-            <div class="flex mb-6">
-                <button class="tab-btn active" onclick="showTab('inbox')">Inbox</button>
-                <button class="tab-btn" onclick="showTab('sent')">Sent</button>
-                <button class="tab-btn" onclick="showTab('compose')">Compose</button>
+        <section class="max-w-5xl">
+            <div class="tabs-header">
+                <button class="tab-btn active" onclick="showTab('inbox')">📥 Inbox</button>
+                <button class="tab-btn" onclick="showTab('sent')">📤 Sent Messages</button>
+                <button class="tab-btn" onclick="showTab('compose')">✏️ Compose New</button>
             </div>
 
-            <div id="inboxTab" class="glass-panel p-6">
-                <h2 class="mb-6">Inbox</h2>
-                <div id="messagesList"></div>
+            <div id="inboxTab" class="glass-panel p-6 animate-fade-in">
+                <div class="flex justify-between items-center mb-5">
+                    <h2>Received Messages</h2>
+                    <button class="btn btn-outline btn-sm" onclick="loadMessages()">🔄 Refresh</button>
+                </div>
+                <div id="messagesList">
+                    <p class="text-muted text-sm py-4">Loading inbox messages...</p>
+                </div>
             </div>
 
-            <div id="sentTab" class="glass-panel p-6" style="display:none;">
-                <h2 class="mb-6">Sent Messages</h2>
+            <div id="sentTab" class="glass-panel p-6 animate-fade-in" style="display:none;">
+                <div class="flex justify-between items-center mb-5">
+                    <h2>Sent Messages</h2>
+                    <button class="btn btn-outline btn-sm" onclick="loadSentMessages()">🔄 Refresh</button>
+                </div>
                 <div id="sentMessagesList"></div>
             </div>
 
-            <div id="composeTab" class="compose-form glass-panel p-6">
-                <h2 class="mb-6">Compose Message</h2>
-                <form id="messageForm">
-                    <div class="form-group mb-4">
+            <div id="composeTab" class="glass-panel p-6 animate-fade-in" style="display:none;">
+                <h2 class="mb-5">Compose Message</h2>
+                <form id="messageForm" style="max-width: 650px;">
+                    <div class="form-group mb-3">
                         <label class="form-label" for="recipient">Recipient</label>
                         <select id="recipient" class="form-control" required>
-                            <option value="">Select recipient...</option>
+                            <option value="">Select recipient user...</option>
                         </select>
                     </div>
-                    <div class="form-group mb-4">
+                    <div class="form-group mb-3">
                         <label class="form-label" for="subject">Subject</label>
-                        <input type="text" id="subject" class="form-control" required>
+                        <input type="text" id="subject" class="form-control" placeholder="e.g. Academic Schedule Advisory" required>
                     </div>
                     <div class="form-group mb-4">
-                        <label class="form-label" for="message">Message</label>
-                        <textarea id="message" class="form-control" rows="6" required></textarea>
+                        <label class="form-label" for="message">Message Body</label>
+                        <textarea id="message" class="form-control" rows="6" placeholder="Type your message..." required style="resize: vertical;"></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">Send Message</button>
+                    <button type="submit" id="sendMsgBtn" class="btn btn-primary">Send Message</button>
                 </form>
             </div>
         </section>
+      </div>
     </main>
 
     <script src="../js/api.js"></script>
@@ -75,95 +118,97 @@
     <script src="../js/management-nav.js"></script>
     <script>
         Auth.requireAuth(['management']);
-        renderManagementSidebar();
-
         const user = Auth.getCurrentUser();
 
         async function loadMessages() {
             try {
                 const res = await ApiClient.request('management.php', { action: 'get_messages', userId: user.id });
-                const messages = res.data;
+                const messages = res.data || [];
                 const container = document.getElementById('messagesList');
                 container.innerHTML = '';
 
                 if (messages.length === 0) {
-                    container.innerHTML = '<p class="text-muted">No messages.</p>';
+                    container.innerHTML = '<p class="text-muted text-center py-6">No received messages.</p>';
                     return;
                 }
 
                 messages.forEach(msg => {
                     const div = document.createElement('div');
-                    div.className = `message-item ${msg.is_read ? '' : 'unread'}`;
+                    div.className = `msg-card ${msg.is_read ? '' : 'unread'}`;
                     div.onclick = () => viewMessage(msg.id);
                     div.innerHTML = `
                         <div class="flex justify-between items-start mb-2">
-                            <strong>${msg.sender_name} (${msg.sender_role})</strong>
-                            <small class="text-muted">${new Date(msg.created_at).toLocaleString()}</small>
+                            <div class="flex items-center gap-2">
+                                <span class="badge badge-primary uppercase">${msg.sender_role || 'user'}</span>
+                                <strong class="text-primary font-bold">${msg.sender_name}</strong>
+                            </div>
+                            <small class="text-muted text-xs">📅 ${new Date(msg.created_at).toLocaleString()}</small>
                         </div>
-                        <div class="font-medium mb-1">${msg.subject}</div>
-                        <div class="text-sm text-secondary">${msg.message.substring(0, 100)}${msg.message.length > 100 ? '...' : ''}</div>
+                        <div class="font-bold text-sm mb-1">${msg.subject}</div>
+                        <div class="text-sm text-secondary">${msg.message}</div>
                     `;
                     container.appendChild(div);
                 });
             } catch (err) {
-                console.error(err);
+                document.getElementById('messagesList').innerHTML = '<p class="text-danger text-center py-6">Failed to load inbox.</p>';
             }
         }
 
         async function loadSentMessages() {
             try {
                 const res = await ApiClient.request('management.php', { action: 'get_sent_messages', userId: user.id });
-                const sent = res.data;
+                const sent = res.data || [];
                 const container = document.getElementById('sentMessagesList');
                 container.innerHTML = '';
 
                 if (sent.length === 0) {
-                    container.innerHTML = '<p class="text-muted">No sent messages.</p>';
+                    container.innerHTML = '<p class="text-muted text-center py-6">No sent messages.</p>';
                     return;
                 }
 
                 sent.forEach(msg => {
                     const div = document.createElement('div');
-                    div.className = 'message-item';
+                    div.className = 'msg-card';
                     div.innerHTML = `
                         <div class="flex justify-between items-start mb-2">
-                            <strong>To: ${msg.recipient_name} (${msg.recipient_role})</strong>
-                            <small class="text-muted">${new Date(msg.created_at).toLocaleString()}</small>
+                            <div class="flex items-center gap-2">
+                                <span class="badge badge-success uppercase">To: ${msg.recipient_role || 'user'}</span>
+                                <strong class="text-primary font-bold">${msg.recipient_name}</strong>
+                            </div>
+                            <small class="text-muted text-xs">📅 ${new Date(msg.created_at).toLocaleString()}</small>
                         </div>
-                        <div class="font-medium mb-1">${msg.subject}</div>
-                        <div class="text-sm text-secondary">${msg.message.substring(0, 100)}${msg.message.length > 100 ? '...' : ''}</div>
+                        <div class="font-bold text-sm mb-1">${msg.subject}</div>
+                        <div class="text-sm text-secondary">${msg.message}</div>
                     `;
                     container.appendChild(div);
                 });
             } catch (err) {
-                console.error(err);
+                document.getElementById('sentMessagesList').innerHTML = '<p class="text-danger text-center py-6">Failed to load sent messages.</p>';
             }
         }
 
         async function loadRecipients() {
             try {
-                const res = await ApiClient.request('management.php', { action: 'get_recipients' });
-                const recipients = res.data;
+                const res = await ApiClient.request('management.php', { action: 'get_recipients', userId: user.id, role: 'management' });
+                const recipients = res.data || [];
                 const select = document.getElementById('recipient');
-                select.innerHTML = '<option value="">Select recipient...</option>';
+                select.innerHTML = '<option value="">Select recipient user...</option>';
                 recipients.forEach(rec => {
-                    const opt = document.createElement('option');
-                    opt.value = rec.id;
-                    opt.textContent = `${rec.name} (${rec.role})`;
-                    select.appendChild(opt);
+                    if (rec.id !== user.id) {
+                        const opt = document.createElement('option');
+                        opt.value = rec.id;
+                        opt.textContent = `${rec.name} (${rec.role.toUpperCase()})`;
+                        select.appendChild(opt);
+                    }
                 });
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) {}
         }
 
         async function viewMessage(id) {
             try {
                 await ApiClient.request('management.php', { action: 'mark_message_read', messageId: id, userId: user.id });
                 loadMessages();
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) {}
         }
 
         function showTab(tab) {
@@ -174,11 +219,12 @@
             document.getElementById('composeTab').style.display = tab === 'compose' ? 'block' : 'none';
             if (tab === 'compose') loadRecipients();
             if (tab === 'sent') loadSentMessages();
+            if (tab === 'inbox') loadMessages();
         }
 
         document.getElementById('messageForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
+            const btn = document.getElementById('sendMsgBtn');
             btn.disabled = true;
 
             const recipientId = document.getElementById('recipient').value;
@@ -196,7 +242,6 @@
                 showToast('Message sent successfully!', 'success');
                 e.target.reset();
                 showTab('inbox');
-                loadMessages();
             } catch (err) {
                 showToast('Failed to send message.', 'error');
             }

@@ -3,30 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Morning Attendance | Teacher Portal</title>
+    <title>Morning Registration | Teacher Portal</title>
+    <meta name="description" content="Log student morning arrivals and notify parents">
     <link rel="stylesheet" href="../css/index.css">
     <link rel="stylesheet" href="../css/teacher-portal.css">
 </head>
 <body class="dashboard-layout">
     <div class="sidebar-overlay"></div>
-    <aside class="sidebar flex-col">
-        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Teacher<br><span class="text-primary text-sm">Portal</span></h2>
-        <nav class="flex-col w-full h-full">
-            <a href="dashboard.html" class="nav-link">Dashboard Summary</a>
-            <a href="timetable.html" class="nav-link">My Timetable</a>
-            <a href="attendance.html" class="nav-link">Class Attendance</a>
-            <a href="morning-attendance.html" class="nav-link active" id="morningAttendanceTab">Morning Attendance</a>
-            <a href="assignments.html" class="nav-link">Assignments</a>
-            <a href="results.html" class="nav-link">Exam Results</a>
-            <div style="margin-top: auto;">
-                <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">Logout</button>
-            </div>
-        </nav>
-    </aside>
+    <aside class="sidebar flex-col"></aside>
 
     <main>
         <div class="mobile-top-bar">
-            <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
+            <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" aria-label="Toggle menu">☰</button>
             <span class="font-bold">Morning Reg.</span>
             <div style="width:24px;"></div>
         </div>
@@ -43,7 +31,23 @@
             </header>
 
             <section class="max-w-4xl">
-                <!-- Roster Form -->
+                <!-- Stats row -->
+                <div class="flex gap-4 mb-6" id="statsRow">
+                    <div class="glass-panel p-4 flex-1 text-center">
+                        <div style="font-size:1.75rem; font-weight:700; color:#6ee7b7;" id="arrivedCount">0</div>
+                        <div class="text-xs text-muted mt-1">Arrived</div>
+                    </div>
+                    <div class="glass-panel p-4 flex-1 text-center">
+                        <div style="font-size:1.75rem; font-weight:700; color:#f87171;" id="pendingCount">0</div>
+                        <div class="text-xs text-muted mt-1">Pending</div>
+                    </div>
+                    <div class="glass-panel p-4 flex-1 text-center">
+                        <div style="font-size:1.75rem; font-weight:700; color:var(--accent-primary);" id="totalCount">0</div>
+                        <div class="text-xs text-muted mt-1">Total Students</div>
+                    </div>
+                </div>
+
+                <!-- Roster Table -->
                 <div class="glass-panel p-6 animate-fade-in" id="rosterContainer">
                     <form id="morningAttendanceForm">
                         <div style="overflow-x: auto; max-height: 60vh;" class="mb-6">
@@ -57,7 +61,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="rosterBody">
-                                    <!-- Populated via JS -->
+                                    <tr><td colspan="4" class="p-8 text-center text-muted">Loading roster...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -67,8 +71,10 @@
         </div>
     </main>
 
+    <script src="../js/firebase-db.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
+    <script src="../js/teacher-nav.js"></script>
     <script>
         Auth.requireAuth(['teacher']);
         
@@ -93,6 +99,12 @@
                 const students = res.data;
                 tbody.innerHTML = '';
                 
+                const arrived = students.filter(s => s.arrival_time).length;
+                const pending = students.length - arrived;
+                document.getElementById('arrivedCount').textContent = arrived;
+                document.getElementById('pendingCount').textContent = pending;
+                document.getElementById('totalCount').textContent = students.length;
+                
                 if(students.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-muted">No students registered in this class.</td></tr>';
                 } else {
@@ -105,25 +117,29 @@
                             tr.innerHTML = `
                                 <td class="p-4 text-sm text-secondary">${timeStr}</td>
                                 <td class="p-4 text-primary font-medium">${stu.name}</td>
-                                <td class="p-4 text-center"><span class="text-xs px-2 py-1 rounded bg-success text-white" style="background: rgba(16,185,129,0.2); color: #6ee7b7;">Arrived</span></td>
+                                <td class="p-4 text-center"><span class="text-xs px-2 py-1 rounded" style="background: rgba(16,185,129,0.2); color: #6ee7b7;">✔ Arrived</span></td>
                                 <td class="p-4 text-right"><button disabled class="btn btn-outline" style="opacity:0.5; cursor:not-allowed; padding: 0.25rem 0.75rem; font-size: 0.75rem;">Done</button></td>
                             `;
                         } else {
                             tr.innerHTML = `
                                 <td class="p-4 text-sm text-muted">--:--</td>
                                 <td class="p-4 font-medium">${stu.name}</td>
-                                <td class="p-4 text-center"><span class="text-xs px-2 py-1 rounded bg-secondary text-muted" style="background: rgba(255,255,255,0.1);">Pending</span></td>
-                                <td class="p-4 text-right"><button type="button" onclick="markArrived('${stu.id}', '${stu.name.replace("'", "\\'")}')" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">Check In</button></td>
+                                <td class="p-4 text-center"><span class="text-xs px-2 py-1 rounded" style="background: rgba(255,255,255,0.08);">Pending</span></td>
+                                <td class="p-4 text-right"><button type="button" onclick="markArrived('${stu.id}', '${stu.name.replace(/'/g, "\\'")}', this)" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">Check In ✓</button></td>
                             `;
                         }
                         
                         tbody.appendChild(tr);
                     });
                 }
-            } catch (err) {}
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-danger">Failed to load roster.</td></tr>';
+            }
         }
 
-        window.markArrived = async function(studentId, studentName) {
+        window.markArrived = async function(studentId, studentName, btn) {
+            btn.disabled = true;
+            btn.textContent = 'Checking in...';
             try {
                 const res = await ApiClient.request('teacher.php', {
                     action: 'submit_morning_attendance',
@@ -132,14 +148,17 @@
                 });
 
                 if(res.parentPhone) {
-                    // UI Mock for SMS
-                    showToast(`[SMS Gateway Mock] Notification sent to ${res.parentPhone} for ${studentName}'s arrival.`, 'success');
+                    showToast(`📱 SMS sent to ${res.parentPhone} for ${studentName}'s arrival.`, 'success');
                 } else {
-                    showToast(`Checked in ${studentName}, but no valid parent phone found to SMS.`, 'warning');
+                    showToast(`Checked in ${studentName}. No parent phone number on file.`, 'success');
                 }
 
                 renderMorningRoster();
-            } catch (err) {}
+            } catch (err) {
+                showToast('Check-in failed. Please try again.', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Check In ✓';
+            }
         }
 
         document.addEventListener('DOMContentLoaded', renderMorningRoster);

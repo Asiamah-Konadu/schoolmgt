@@ -1,74 +1,21 @@
-/* Parent Portal Layout Styles */
+/* Parent Portal Layout Styles - Inherits from index.css */
 
-.dashboard-layout { 
-  display: grid; 
-  grid-template-columns: 260px 1fr; 
-  min-height: 100vh; 
+.ward-badge {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
-.sidebar { 
-  background: var(--bg-glass); 
-  border-right: 1px solid var(--border-color); 
-  padding: 2rem 1rem; 
-  transition: transform 0.3s ease; 
-  display: flex;
-  flex-direction: column;
+.fee-badge-paid {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
 }
 
-.nav-link { 
-  display: flex; 
-  align-items: center; 
-  padding: 0.75rem 1rem; 
-  color: var(--text-secondary); 
-  border-radius: var(--radius-md); 
-  margin-bottom: 0.5rem; 
-  transition: var(--transition); 
-  text-decoration: none; 
-}
-
-.nav-link:hover, .nav-link.active { 
-  background: var(--accent-glow); 
-  color: var(--text-primary); 
-}
-
-.mobile-top-bar { 
-  display: block; 
-  padding: 1rem; 
-  background: var(--bg-glass); 
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-color); 
-  align-items: center; 
-  justify-content: space-between; 
-  position: sticky; 
-  top: 0; 
-  z-index: 100; 
-}
-
-.sidebar-overlay { 
-  display: none; 
-  position: fixed; 
- 
-  background: rgba(0,0,0,0.5); 
-  z-index: 900; 
-  backdrop-filter: blur(4px); 
-  width: 0%;
-}
-
-/* Summary Grid System */
-.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; width: 425px; }
-.card-1 { grid-column: span 1; }
-.card-2 { grid-column: span 2; }
-.card-3 { grid-column: span 3; }
-
-@media (max-width: 425px) {
-    .dashboard-layout { grid-template-columns: 1fr; width: 425px; }
-    .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 280px; z-index: 1000; transform: translateX(-100%); }
-    .sidebar.active { transform: translateX(0); }
-    .mobile-top-bar { display: flex; }
-    .p-8 { padding: 1.5rem; max-width: 425px; }
-}
-
-@media (max-width: 425px) {
-    .summary-grid { grid-template-columns: 1fr; }
-    .card-2, .card-3 { grid-column: span 1; }
+.fee-badge-due {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
 }

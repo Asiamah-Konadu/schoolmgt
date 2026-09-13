@@ -3,46 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Promotion Management | School System</title>
+    <title>Promotion Management | Kings Academy Management</title>
     <link rel="stylesheet" href="../css/index.css">
-    <style>
-        .dashboard-layout { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; font-size: small; }
-        .sidebar { background: var(--bg-glass); border-right: 1px solid var(--border-color); padding: 2rem 1rem; }
-        .nav-link { display: flex; align-items: center; padding: 0.75rem 1rem; color: var(--text-secondary); border-radius: var(--radius-md); margin-bottom: 0.5rem; transition: var(--transition); }
-        .nav-link:hover, .nav-link.active { background: var(--accent-glow); color: var(--text-primary); }
-    </style>
 </head>
 <body class="dashboard-layout">
-    <aside class="sidebar flex-col">
-        <h2 class="text-center mb-8" style="font-size: 1.25rem;">Management<br><span class="text-primary text-sm">Portal</span></h2>
-        <nav class="flex-col w-full h-full"></nav>
-    </aside>
+    <div class="sidebar-overlay"></div>
+    <aside class="sidebar"></aside>
 
-    <main class="p-8">
+    <main>
+      <div class="mobile-top-bar">
+        <button class="mobile-menu-btn" onclick="window.UI?.toggleSidebar()">☰</button>
+        <span class="font-bold">Student Promotions</span>
+        <div style="width:38px;"></div>
+      </div>
+
+      <div class="p-8">
         <header class="mb-8">
-            <h1 class="text-2xl">Promotion Management</h1>
-            <p class="text-muted">Review and approve student promotions recommended by class teachers.</p>
+            <h1 class="text-2xl">Annual Student Promotions</h1>
+            <p class="text-muted">Review, validate, and authorize student promotion recommendations submitted by mentorship teachers.</p>
         </header>
 
         <section class="max-w-5xl">
             <div class="glass-panel p-6 animate-fade-in">
+                <div class="flex justify-between items-center mb-5">
+                    <h2>Pending Promotion Recommendations</h2>
+                    <button class="btn btn-outline btn-sm" onclick="loadRecommended()">🔄 Refresh</button>
+                </div>
                 <div style="overflow-x: auto;">
-                    <table class="w-full text-left" style="border-collapse: collapse;">
+                    <table class="data-table">
                         <thead>
-                            <tr style="border-bottom: 1px solid var(--border-color);">
-                                <th class="p-4 text-muted font-medium">Student Name</th>
-                                <th class="p-4 text-muted font-medium">Current Class</th>
-                                <th class="p-4 text-muted font-medium">Next Potential Class</th>
-                                <th class="p-4 text-muted font-medium text-right">Action</th>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Current Class</th>
+                                <th>Recommended Next Class</th>
+                                <th class="text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody id="promotionTableBody">
-                            <!-- Populated via JS -->
+                            <tr><td colspan="4" class="p-6 text-center text-muted">Loading recommendations...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </section>
+      </div>
     </main>
 
     <script src="../js/api.js"></script>
@@ -50,10 +54,11 @@
     <script src="../js/management-nav.js"></script>
     <script>
         Auth.requireAuth(['management']);
-        renderManagementSidebar();
 
         const classSequence = [
             'Nursery 1', 'Nursery 2', 'KG 1', 'KG 2', 
+            'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 
+            'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10A', 'Grade 10B', 'Grade 11', 'Grade 12',
             'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 
             'JHS 1', 'JHS 2', 'JHS 3'
         ];
@@ -63,48 +68,51 @@
             try {
                 const res = await ApiClient.request('management.php', { action: 'get_recommended_promotions' });
                 tbody.innerHTML = '';
+                const list = res.data || [];
                 
-                if(res.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-muted">No pending promotion recommendations.</td></tr>';
+                if (list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-muted">No pending promotion recommendations from teachers.</td></tr>';
                     return;
                 }
 
-                res.data.forEach(item => {
-                    const currentIndex = classSequence.indexOf(item.class);
-                    const nextClass = (currentIndex !== -1 && currentIndex < classSequence.length - 1) ? classSequence[currentIndex + 1] : 'Graduated';
+                list.forEach(item => {
+                    const currentCls = item.class || '';
+                    const currentIndex = classSequence.indexOf(currentCls);
+                    const nextClass = (currentIndex !== -1 && currentIndex < classSequence.length - 1) ? classSequence[currentIndex + 1] : 'Graduated / Higher Grade';
                     
                     const tr = document.createElement('tr');
-                    tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
                     tr.innerHTML = `
-                        <td class="p-4 font-medium text-primary">${item.name}</td>
-                        <td class="p-4"><span class="px-2 py-1 bg-secondary rounded text-xs">${item.class}</span></td>
-                        <td class="p-4"><span class="px-2 py-1 bg-success rounded text-xs" style="background: rgba(16,185,129,0.1); color: #6ee7b7;">${nextClass}</span></td>
-                        <td class="p-4 text-right">
-                            <button onclick="approvePromotion('${item.id}', '${item.name.replace(/'/g, "\\'")}', '${nextClass}')" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">Approve & Promote</button>
+                        <td class="font-bold text-primary">${item.name}</td>
+                        <td><span class="badge badge-primary">${item.class}</span></td>
+                        <td><span class="badge badge-success">${nextClass}</span></td>
+                        <td class="text-right">
+                            <button onclick="approvePromotion('${item.id}', '${item.name.replace(/'/g, "\\'")}', '${nextClass}')" class="btn btn-primary btn-sm">✓ Approve &amp; Promote</button>
                         </td>
                     `;
                     tbody.appendChild(tr);
                 });
-            } catch (err) {}
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-danger">Failed to load promotion requests.</td></tr>';
+            }
         }
 
         window.approvePromotion = async function(id, name, nextClass) {
-            if(!confirm(`Promote ${name} to ${nextClass}? This action is permanent.`)) return;
+            if (!confirm(`Promote ${name} to ${nextClass}?`)) return;
 
             try {
                 await ApiClient.request('management.php', {
                     action: 'approve_promotion',
-                    studentId: id
+                    studentId: id,
+                    nextClass: nextClass
                 });
                 showToast(`${name} has been promoted to ${nextClass}.`, 'success');
                 loadRecommended();
             } catch (err) {
                 showToast('Failed to approve promotion.', 'error');
             }
-        }
+        };
 
         loadRecommended();
     </script>
 </body>
 </html>
-

@@ -3,401 +3,134 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Finance Manager | School System</title>
-    <meta name="description" content="Manage student billing and payments" />
+    <title>Finance Manager | Kings Academy Management</title>
     <link rel="stylesheet" href="../css/index.css" />
-    <style>
-      .dashboard-layout {
-        display: grid;
-        grid-template-columns: 250px 1fr;
-        min-height: 100vh;
-        font-size: small;
-      }
-      .sidebar {
-        background: var(--bg-glass);
-        border-right: 1px solid var(--border-color);
-        padding: 2rem 1rem;
-      }
-      .nav-link {
-        display: flex;
-        align-items: center;
-        padding: 0.75rem 1rem;
-        color: var(--text-secondary);
-        border-radius: var(--radius-md);
-        margin-bottom: 0.5rem;
-        transition: var(--transition);
-      }
-      .nav-link:hover,
-      .nav-link.active {
-        background: var(--accent-glow);
-        color: var(--text-primary);
-      }
-
-      /* Student search list */
-      .search-box {
-        position: relative;
-        margin-bottom: 1.5rem;
-      }
-      .search-input {
-        width: 100%;
-        padding: 0.75rem 1rem 0.75rem 2.5rem;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        color: var(--text-primary);
-        outline: none;
-      }
-      .search-icon {
-        position: absolute;
-        left: 0.75rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--text-muted);
-      }
-
-      .student-item {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 0.75rem 1rem;
-        border-radius: var(--radius-md);
-        cursor: pointer;
-        transition: var(--transition);
-        border: 1px solid transparent;
-        margin-bottom: 0.5rem;
-      }
-      .student-item:hover {
-        background: rgba(255, 255, 255, 0.03);
-      }
-      .student-item.active {
-        background: var(--accent-glow);
-        border-color: var(--accent-primary);
-      }
-      .student-avatar {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, var(--accent-primary), #8b5cf6);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        color: white;
-        font-size: 0.8rem;
-      }
-
-      /* Ledger Table */
-      .ledger-table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-      .ledger-table th {
-        text-align: left;
-        padding: 0.75rem 1rem;
-        color: var(--text-muted);
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        border-bottom: 1px solid var(--border-color);
-      }
-      .ledger-table td {
-        padding: 1rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-        font-size: 0.9rem;
-      }
-      .type-billing {
-        color: #f87171;
-      }
-      .type-payment {
-        color: #6ee7b7;
-      }
-
-      .balance-card {
-        padding: 1.5rem;
-        border-radius: var(--radius-lg);
-        text-align: center;
-        background: linear-gradient(
-          135deg,
-          rgba(59, 130, 246, 0.1),
-          rgba(139, 92, 246, 0.1)
-        );
-        border: 1px solid rgba(59, 130, 246, 0.2);
-      }
-      .balance-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--text-primary);
-      }
-
-      /* Form styling */
-      .modal-form {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.25rem;
-      }
-      .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-      .form-label {
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-      .form-input {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        color: var(--text-primary);
-        font-size: 0.9rem;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        outline: none;
-      }
-      .form-input:focus {
-        background: rgba(255, 255, 255, 0.07);
-        border-color: var(--accent-primary);
-        box-shadow: 0 0 0 4px var(--accent-glow);
-        transform: translateY(-1px);
-      }
-      .form-input::placeholder {
-        color: var(--text-muted);
-        opacity: 0.5;
-      }
-      select.form-input {
-        cursor: pointer;
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 1rem center;
-        padding-right: 2.5rem;
-      }
-     .mobile-top-bar { 
-  display: none; 
-  padding: 1rem; 
-  background: var(--bg-glass); 
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-color); 
-  align-items: center; 
-  justify-content: space-between; 
-  position: sticky; 
-  top: 0; 
-  z-index: 100; 
-}
-
-.sidebar-overlay { 
-  display: none; 
-  position: fixed; 
-  inset: 0; 
-  background: rgba(0,0,0,0.5); 
-  z-index: 900; 
-  backdrop-filter: blur(4px); 
-}
-
-/* Summary Grid System */
-.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
-.card-1 { grid-column: span 1; }
-.card-2 { grid-column: span 2; }
-.card-3 { grid-column: span 3; }
-
-@media (max-width: 425px) {
-    .dashboard-layout { grid-template-columns: 1fr; }
-    .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 280px; z-index: 1000; transform: translateX(-100%); }
-    .sidebar.active { transform: translateX(0); }
-    .mobile-top-bar { display: flex; }
-    .p-8 { padding: 1.5rem; }
-}
-
-@media (max-width: 425px) {
-    .summary-grid { grid-template-columns: 1fr; }
-    .card-2, .card-3 { grid-column: span 1; }
-}
-    </style>
   </head>
   <body class="dashboard-layout">
     <div class="sidebar-overlay"></div>
-    <aside class="sidebar flex-col">
-      <h2 class="text-center mb-8" style="font-size: 1.25rem">
-        Kings Accademy<br /><span class="text-primary text-sm">Management</span>
-      </h2>
-
-      <nav class="flex-col w-full h-full">
-        <a href="dashboard.html" class="nav-link ">Dashboard</a>
-        <a href="announcements.html" class="nav-link">Announcements</a>
-        <a href="students.html" class="nav-link">Students & Parents</a>
-        <a href="teachers.html" class="nav-link">Teachers</a>
-        <a href="timetable.html" class="nav-link">Timetable Import</a>
-        <a href="results.html" class="nav-link">Results Manager</a>
-        <a href="finance.html" class="nav-link active">Finance Manager</a>
-
-        <div style="margin-top: auto">
-          <button onclick="Auth.logout()" class="btn btn-outline w-full mt-8">
-            Logout
-          </button>
-        </div>
-      </nav>
-    </aside>
+    <aside class="sidebar"></aside>
 
     <main>
       <div class="mobile-top-bar">
-        <button onclick="window.UI?.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">☰</button>
-        <span class="font-bold">Admin Dashboard</span>
-        <div style="width:24px;"></div>
+        <button class="mobile-menu-btn" onclick="window.UI?.toggleSidebar()">☰</button>
+        <span class="font-bold">Finance Manager</span>
+        <div style="width:38px;"></div>
       </div>
-      <header class="mb-8">
-        <h1 class="text-2xl">Finance Manager</h1>
-        <p class="text-muted">
-          Manage student billings, fee payments, and track outstanding balances.
-        </p>
-      </header>
 
-      <div class="grid gap-8" style="grid-template-columns: 320px 1fr">
-        <!-- Left: Student List -->
-        <div class="glass-panel p-5 flex-col" style="max-height: 80vh">
-          <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input
-              type="text"
-              id="studentSearch"
-              class="search-input"
-              placeholder="Search students..."
-              oninput="filterStudents()"
-            />
-          </div>
-          <div id="studentListContainer" style="overflow-y: auto; flex: 1">
-            <p class="text-xs text-muted text-center py-4">
-              Loading students...
-            </p>
-          </div>
-        </div>
-
-        <!-- Right: Ledger -->
-        <div id="ledgerSection" class="flex-col gap-6" style="display: none">
-          <div class="grid gap-6" style="grid-template-columns: 2fr 1fr">
-            <!-- Summary Stats -->
-            <div class="glass-panel p-6 flex-col justify-center">
-              <h2 id="selectedStudentName" class="mb-1">Student Name</h2>
-              <p id="selectedStudentClass" class="text-sm text-muted mb-0">
-                Class Name
-              </p>
-            </div>
-            <div class="glass-panel balance-card">
-              <div class="text-xs text-muted mb-1 text-uppercase font-bold">
-                Outstanding Balance
-              </div>
-              <div class="balance-value" id="outstandingBalance">Ghc 0.00</div>
-            </div>
-          </div>
-
-          <!-- Add Entry Form -->
-          <div class="glass-panel p-6 animate-fade-in">
-            <h3 class="mb-4">Add New Record</h3>
-            <form
-              id="financeForm"
-              class="modal-form"
-              onsubmit="addEntry(event)"
-            >
-              <div class="form-group" style="grid-column: span 2">
-                <label class="form-label">Description</label>
-                <input
-                  type="text"
-                  id="fDesc"
-                  class="form-input"
-                  placeholder="e.g. 2nd Term Tuition Fee, Uniform Payment"
-                  required
-                />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Amount Billed (Invoiced)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  id="fBilled"
-                  class="form-input"
-                  placeholder="0.00"
-                />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Amount Paid (Deposit)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  id="fPaid"
-                  class="form-input"
-                  placeholder="0.00"
-                />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Term</label>
-                <select id="fTerm" class="form-input">
-                  <option>First Term</option>
-                  <option>Second Term</option>
-                  <option>Third Term</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Academic Year</label>
-                <input
-                  type="text"
-                  id="fYear"
-                  class="form-input"
-                  placeholder="2025/2026"
-                  required
-                />
-              </div>
-              <div style="grid-column: span 2" class="mt-2">
-                <button type="submit" class="btn btn-primary w-full">
-                  Save Entry
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <!-- Ledger Table -->
-          <div class="glass-panel p-6 animate-fade-in delay-100">
-            <h3 class="mb-4">Transaction History</h3>
-            <div style="overflow-x: auto">
-              <table class="ledger-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Description</th>
-                    <th>Term/Year</th>
-                    <th>Billed</th>
-                    <th>Paid</th>
-                    <th style="text-align: right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="ledgerBody">
-                  <!-- Injected via JS -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Initial Placeholder -->
-        <div
-          id="ledgerPlaceholder"
-          class="glass-panel p-12 text-center flex-col items-center justify-center"
-        >
-          <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5">
-            🏦
-          </div>
-          <h2 class="text-muted">Select a student</h2>
-          <p class="text-muted text-sm">
-            Pick a student from the left list to manage their financial records.
+      <div class="p-8">
+        <header class="mb-8">
+          <h1 class="text-2xl">Student Billing &amp; Fee Management</h1>
+          <p class="text-muted">
+            Issue fee billings, log tuition payments, and track live balance statements.
           </p>
+        </header>
+
+        <div class="grid gap-8" style="display: grid; grid-template-columns: 320px 1fr;">
+          <!-- Left: Student Selector -->
+          <div class="glass-panel p-5 flex-col" style="height: fit-content; max-height: 82vh;">
+            <div class="form-group mb-3">
+              <label class="form-label">🔍 Select Student</label>
+              <input
+                type="text"
+                id="studentSearch"
+                class="form-control"
+                placeholder="Search by name or class..."
+                oninput="filterStudents()"
+              />
+            </div>
+            <div id="studentListContainer" class="flex-col gap-2" style="overflow-y: auto; max-height: 65vh;">
+              <p class="text-xs text-muted text-center py-4">Loading student ledger directory...</p>
+            </div>
+          </div>
+
+          <!-- Right: Ledger & Actions -->
+          <div id="ledgerSection" class="flex-col gap-6" style="display: none;">
+            
+            <!-- Summary Header Cards -->
+            <div class="grid gap-6" style="display: grid; grid-template-columns: 1.5fr 1fr;">
+              <div class="glass-panel p-6 flex-col justify-center">
+                <div class="badge badge-primary mb-2" style="width: fit-content;">Active Student Ledger</div>
+                <h2 id="selectedStudentName" class="mb-1">Tommy Brown</h2>
+                <p id="selectedStudentClass" class="text-sm text-secondary mb-0">Grade 10A</p>
+              </div>
+              <div class="stat-card p-6 text-center">
+                <div class="stat-label">Outstanding Balance</div>
+                <div class="stat-value text-danger" id="outstandingBalance">Ghc 0.00</div>
+              </div>
+            </div>
+
+            <!-- Add Entry Form -->
+            <div class="glass-panel p-6 animate-fade-in">
+              <h3 class="mb-4">➕ Record Billing / Payment Transaction</h3>
+              <form id="financeForm" onsubmit="addEntry(event)">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Transaction Description</label>
+                    <input type="text" id="fDesc" class="form-control" placeholder="e.g. Term 1 Tuition Fee, Uniform Deposit" required />
+                  </div>
+                  <div class="form-group mb-0">
+                    <label class="form-label">Amount Billed (Ghc)</label>
+                    <input type="number" step="0.01" id="fBilled" class="form-control" placeholder="0.00" />
+                  </div>
+                  <div class="form-group mb-0">
+                    <label class="form-label">Amount Paid (Ghc)</label>
+                    <input type="number" step="0.01" id="fPaid" class="form-control" placeholder="0.00" />
+                  </div>
+                  <div class="form-group mb-0">
+                    <label class="form-label">Term</label>
+                    <select id="fTerm" class="form-control">
+                      <option>First Term</option>
+                      <option>Second Term</option>
+                      <option>Third Term</option>
+                    </select>
+                  </div>
+                  <div class="form-group mb-0">
+                    <label class="form-label">Academic Year</label>
+                    <input type="text" id="fYear" class="form-control" placeholder="2025/2026" required />
+                  </div>
+                </div>
+                <button type="submit" id="saveEntryBtn" class="btn btn-primary w-full mt-4">Save Financial Record</button>
+              </form>
+            </div>
+
+            <!-- Ledger Table -->
+            <div class="glass-panel p-6 animate-fade-in delay-100">
+              <div class="flex justify-between items-center mb-4">
+                <h3>📜 Transaction History</h3>
+                <span id="txCount" class="text-xs text-muted"></span>
+              </div>
+              <div style="overflow-x: auto;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Description</th>
+                      <th>Term/Year</th>
+                      <th>Billed (Ghc)</th>
+                      <th>Paid (Ghc)</th>
+                      <th class="text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ledgerBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Placeholder when no student chosen -->
+          <div id="ledgerPlaceholder" class="glass-panel p-12 text-center flex-col items-center justify-center" style="min-height: 400px;">
+            <div style="font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.6;">🏦</div>
+            <h2 class="text-muted">Select a Student Ledger</h2>
+            <p class="text-muted text-sm mt-2">Pick any student from the left directory to inspect invoices and enter payments.</p>
+          </div>
         </div>
       </div>
     </main>
 
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
+    <script src="../js/management-nav.js"></script>
     <script>
       Auth.requireAuth(["management"]);
 
@@ -407,16 +140,13 @@
 
       document.addEventListener("DOMContentLoaded", async () => {
         const now = new Date();
-        document.getElementById("fYear").value =
-          `${now.getFullYear()}/${now.getFullYear() + 1}`;
+        document.getElementById("fYear").value = `${now.getFullYear()}/${now.getFullYear() + 1}`;
         await loadStudents();
       });
 
       async function loadStudents() {
         try {
-          const res = await ApiClient.request("management.php", {
-            action: "get_students",
-          });
+          const res = await ApiClient.request("management.php", { action: "get_students" });
           allStudents = res.data || [];
           renderStudentList(allStudents);
         } catch (err) {
@@ -427,41 +157,31 @@
       function renderStudentList(students) {
         const container = document.getElementById("studentListContainer");
         if (students.length === 0) {
-          container.innerHTML =
-            '<p class="text-xs text-muted text-center py-4">No students found.</p>';
+          container.innerHTML = '<p class="text-xs text-muted text-center py-4">No students found.</p>';
           return;
         }
 
-        container.innerHTML = students
-          .map((s) => {
-            const initials = s.name
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase();
-            const isActive =
-              selectedStudent && selectedStudent.id === s.id ? "active" : "";
-            return `
-            <div class="student-item ${isActive}" onclick="selectStudent('${s.id}')">
-              <div class="student-avatar">${initials}</div>
-              <div style="flex:1; min-width:0;">
-                <div class="font-medium text-sm truncate">${s.name}</div>
-                <div class="text-xs text-muted">${s.class}</div>
+        container.innerHTML = students.map((s) => {
+          const initials = s.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+          const isActive = selectedStudent && selectedStudent.id === s.id;
+          return `
+            <div class="preview-item ${isActive ? 'active' : ''}" style="${isActive ? 'border-color: #6366f1; background: rgba(99,102,241,0.15);' : ''} cursor:pointer;" onclick="selectStudent('${s.id}')">
+              <div class="flex items-center gap-3">
+                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem;color:white;">${initials}</div>
+                <div>
+                  <div class="font-bold text-sm text-primary">${s.name}</div>
+                  <div class="text-xs text-muted">${s.class}</div>
+                </div>
               </div>
+              <span class="text-muted text-xs">&rarr;</span>
             </div>
           `;
-          })
-          .join("");
+        }).join("");
       }
 
       function filterStudents() {
         const q = document.getElementById("studentSearch").value.toLowerCase();
-        const filtered = allStudents.filter(
-          (s) =>
-            s.name.toLowerCase().includes(q) ||
-            s.class.toLowerCase().includes(q),
-        );
+        const filtered = allStudents.filter((s) => s.name.toLowerCase().includes(q) || (s.class || "").toLowerCase().includes(q));
         renderStudentList(filtered);
       }
 
@@ -470,38 +190,19 @@
         if (!student) return;
 
         selectedStudent = student;
-        document.getElementById("selectedStudentName").textContent =
-          student.name;
-        document.getElementById("selectedStudentClass").textContent =
-          student.class;
+        document.getElementById("selectedStudentName").textContent = student.name;
+        document.getElementById("selectedStudentClass").textContent = `Class: ${student.class}`;
 
-        // Show sections
         document.getElementById("ledgerPlaceholder").style.display = "none";
         document.getElementById("ledgerSection").style.display = "flex";
 
-        // Refresh list active state
-        renderStudentList(
-          allStudents.filter((s) => {
-            const q = document
-              .getElementById("studentSearch")
-              .value.toLowerCase();
-            return (
-              s.name.toLowerCase().includes(q) ||
-              s.class.toLowerCase().includes(q)
-            );
-          }),
-        );
-
+        filterStudents();
         await loadLedger();
       }
 
       async function loadLedger() {
         if (!selectedStudent) return;
         try {
-          // We can use the parent API's get_financials or implement a management one.
-          // Since management.php already has get_all_financials, we could use that and filter locally,
-          // OR we can add a specific get_student_financials to management.php.
-          // For now, let's just fetch all and filter for simplicity, or better, use the existing parent.php logic.
           const res = await ApiClient.request("parent.php", {
             action: "get_financials",
             studentId: selectedStudent.id,
@@ -509,7 +210,7 @@
           selectedStudentLedger = res.data || [];
           renderLedger();
         } catch (err) {
-          showToast("Failed to load ledger", "error");
+          showToast("Failed to load fee statement.", "error");
         }
       }
 
@@ -518,94 +219,84 @@
         let totalBilled = 0;
         let totalPaid = 0;
 
+        document.getElementById("txCount").textContent = `${selectedStudentLedger.length} entries`;
+
         if (selectedStudentLedger.length === 0) {
-          body.innerHTML =
-            '<tr><td colspan="6" class="text-muted text-center py-8">No transaction records found for this student.</td></tr>';
-          document.getElementById("outstandingBalance").textContent =
-            "Ghc 0.00";
+          body.innerHTML = '<tr><td colspan="6" class="text-muted text-center py-6">No transaction records found for this student.</td></tr>';
+          document.getElementById("outstandingBalance").textContent = "Ghc 0.00";
           return;
         }
 
-        body.innerHTML = selectedStudentLedger
-          .map((entry) => {
-            const billed = parseFloat(entry.amount_billed || 0);
-            const paid = parseFloat(entry.amount_paid || 0);
-            totalBilled += billed;
-            totalPaid += paid;
+        body.innerHTML = selectedStudentLedger.map((entry) => {
+          const billed = parseFloat(entry.amount_billed || 0);
+          const paid = parseFloat(entry.amount_paid || 0);
+          totalBilled += billed;
+          totalPaid += paid;
 
-            return `
+          return `
             <tr>
-              <td class="text-muted" style="font-size:0.75rem;">${new Date(entry.created_at).toLocaleDateString()}</td>
+              <td class="text-muted text-xs">${new Date(entry.created_at).toLocaleDateString()}</td>
               <td class="font-medium">${entry.description}</td>
-              <td class="text-xs text-muted">${entry.term || "N/A"}<br>${entry.academic_year || ""}</td>
-              <td class="type-billing">${billed > 0 ? "Ghc " + billed.toFixed(2) : "-"}</td>
-              <td class="type-payment">${paid > 0 ? "Ghc " + paid.toFixed(2) : "-"}</td>
-              <td style="text-align: right">
-                <button class="text-muted text-xs hover:text-danger" onclick="deleteEntry(${entry.id})" style="background:none;border:none;cursor:pointer;">🗑 Delete</button>
+              <td class="text-xs text-muted">${entry.term || ""}<br>${entry.academic_year || ""}</td>
+              <td class="text-danger font-medium">${billed > 0 ? "Ghc " + billed.toFixed(2) : "—"}</td>
+              <td class="text-success font-medium">${paid > 0 ? "Ghc " + paid.toFixed(2) : "—"}</td>
+              <td class="text-right">
+                <button class="text-danger text-xs font-bold" onclick="deleteEntry('${entry.id}')" style="background:none;border:none;cursor:pointer;">🗑 Delete</button>
               </td>
             </tr>
           `;
-          })
-          .join("");
+        }).join("");
 
         const balance = totalBilled - totalPaid;
-        document.getElementById("outstandingBalance").textContent =
-          `Ghc ${balance.toFixed(2)}`;
-        document.getElementById("outstandingBalance").style.color =
-          balance > 0 ? "#f87171" : "#6ee7b7";
+        const balEl = document.getElementById("outstandingBalance");
+        balEl.textContent = `Ghc ${balance.toFixed(2)}`;
+        balEl.className = balance > 0 ? "stat-value text-danger" : "stat-value text-success";
       }
 
       async function addEntry(e) {
         e.preventDefault();
         if (!selectedStudent) return;
 
+        const btn = document.getElementById("saveEntryBtn");
+        btn.disabled = true;
+
         const data = {
           action: "add_financial",
           studentId: selectedStudent.id,
           description: document.getElementById("fDesc").value,
-          amountBilled:
-            parseFloat(document.getElementById("fBilled").value) || 0,
+          amountBilled: parseFloat(document.getElementById("fBilled").value) || 0,
           amountPaid: parseFloat(document.getElementById("fPaid").value) || 0,
           term: document.getElementById("fTerm").value,
           academicYear: document.getElementById("fYear").value,
         };
 
         if (data.amountBilled === 0 && data.amountPaid === 0) {
-          showToast(
-            "Please enter either a billed amount or a paid amount.",
-            "error",
-          );
+          showToast("Please enter either a billed or paid amount.", "warning");
+          btn.disabled = false;
           return;
         }
 
         try {
-          const res = await ApiClient.request("management.php", data);
-          if (res.status === "success") {
-            showToast("Record saved successfully!", "success");
-            document.getElementById("financeForm").reset();
-            const now = new Date();
-            document.getElementById("fYear").value =
-              `${now.getFullYear()}/${now.getFullYear() + 1}`;
-            await loadLedger();
-          }
+          await ApiClient.request("management.php", data);
+          showToast("Record saved successfully!", "success");
+          document.getElementById("fDesc").value = "";
+          document.getElementById("fBilled").value = "";
+          document.getElementById("fPaid").value = "";
+          await loadLedger();
         } catch (err) {
-          showToast("Failed to save entry", "error");
+          showToast("Failed to save entry.", "error");
         }
+        btn.disabled = false;
       }
 
       async function deleteEntry(id) {
-        if (!confirm("Are you sure you want to delete this record?")) return;
+        if (!confirm("Are you sure you want to delete this financial entry?")) return;
         try {
-          const res = await ApiClient.request("management.php", {
-            action: "delete_financial",
-            id,
-          });
-          if (res.status === "success") {
-            showToast("Record deleted", "success");
-            await loadLedger();
-          }
+          await ApiClient.request("management.php", { action: "delete_financial", id });
+          showToast("Record deleted.", "success");
+          await loadLedger();
         } catch (err) {
-          showToast("Failed to delete record", "error");
+          showToast("Failed to delete record.", "error");
         }
       }
     </script>
