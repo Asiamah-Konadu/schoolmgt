@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firebase Database Migration | School Management</title>
+  <link rel="stylesheet" href="css/index.css">
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      background: radial-gradient(circle at top, #1e1b4b, #0f172a 70%);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #f8fafc;
+    }
+    .migration-card {
+      max-width: 700px;
+      width: 100%;
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(16px);
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+    .log-box {
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      max-height: 280px;
+      overflow-y: auto;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      margin: 1.5rem 0;
+    }
+    .log-entry { margin-bottom: 0.35rem; }
+    .log-success { color: #4ade80; }
+    .log-info { color: #60a5fa; }
+    .log-warn { color: #fbbf24; }
+    .log-error { color: #f87171; }
+    .btn-migrate {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: white;
+      font-weight: 600;
+      padding: 0.75rem 1.75rem;
+      border-radius: 0.5rem;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .btn-migrate:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+    }
+    .btn-migrate:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .progress-bar-wrap {
+      height: 8px;
+      background: #1e293b;
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #6366f1, #10b981);
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+<div class="migration-card">
+  <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+    <div style="background: rgba(99, 102, 241, 0.2); padding: 0.75rem; border-radius: 0.75rem; border: 1px solid rgba(99, 102, 241, 0.4);">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+        <path d="M12 12v9"></path>
+        <path d="m8 17 4 4 4-4"></path>
+      </svg>
+    </div>
+    <div>
+      <h1 style="font-size: 1.4rem; margin: 0; font-weight: 700;">Firebase Firestore Data Migration</h1>
+      <p style="font-size: 0.875rem; color: #94a3b8; margin: 0.25rem 0 0 0;">Upload all schema, users, students, results, timetables, and financials to Firestore.</p>
+    </div>
+  </div>
+
+  <div class="progress-bar-wrap">
+    <div id="progressBar" class="progress-bar-fill"></div>
+  </div>
+
+  <div id="logBox" class="log-box">
+    <div class="log-entry log-info">[Ready] Click 'Start Migration' to send all database collections to Firebase Firestore.</div>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <span id="statusText" style="font-size: 0.875rem; color: #94a3b8;">Target Project: <strong style="color:#e2e8f0;">schoolmgt-6fcfb</strong></span>
+    <button id="startBtn" class="btn-migrate" onclick="runMigration()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+      </svg>
+      Start Migration
+    </button>
+  </div>
+</div>
+
+<script type="module">
+  import { db } from "./js/firebase-config.js";
+  import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  const dataPayload = {
+    users: [
+      {
+        id: "ADM001",
+        name: "System Admin",
+        email: "admin@school.edu",
+        password: "password123",
+        role: "management",
+        phone: "555-0100",
+        assignedClass: null,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: "TCH001",
+        name: "Jane Smith",
+        email: "jane.smith@school.edu",
+        password: "password123",
+        role: "teacher",
+        phone: "555-0102",
+        assignedClass: "Grade 10A",
+        subjects: ["Mathematics", "Physics"],
+        created_at: new Date().toISOString()
+      },
+      {
+        id: "TCH002",
+        name: "Robert Johnson",
+        email: "robert.j@school.edu",
+        password: "password123",
+        role: "teacher",
+        phone: "555-0103",
+        assignedClass: "Grade 10B",
+        subjects: ["History", "English"],
+        created_at: new Date().toISOString()
+      },
+      {
+        id: "PAR001",
+        name: "Michael Brown",
+        email: "michael.b@email.com",
+        phone: "555-0101",
+        password: "password123",
+        role: "parent",
+        assignedClass: null,
+        studentIds: ["STU001", "STU002"],
+        created_at: new Date().toISOString()
+      }
+    ],
+    students: [
+      {
+        id: "STU001",
+        name: "Tommy Brown",
+        class_name: "Grade 10A",
+        parent_id: "PAR001",
+        student_parents: ["PAR001"],
+        created_at: new Date().toISOString()
+      },
+      {
+        id: "STU002",
+        name: "Sarah Jenkins",
+        class_name: "Grade 10A",
+        parent_id: "PAR001",
+        student_parents: ["PAR001"],
+        created_at: new Date().toISOString()
+      },
+      {
+        id: "STU003",
+        name: "David Wilson",
+        class_name: "Grade 10B",
+        parent_id: "PAR001",
+        student_parents: ["PAR001"],
+        created_at: new Date().toISOString()
+      }
+    ],
+    announcements: [
+      {
+        id: "A001",
+        title: "Welcome to the New Academic Term",
+        content: "Classes begin promptly at 8:00 AM. Please ensure all student registrations and uniforms are completed.",
+        target_audience: "both",
+        created_at: new Date().toISOString()
+      },
+      {
+        id: "A002",
+        title: "Mandatory Staff & Faculty Meeting",
+        content: "Staff meeting scheduled for Friday at 3:30 PM in the Main Conference Hall.",
+        target_audience: "teachers",
+        created_at: new Date().toISOString()
+      }
+    ],
+    timetables: [
+      {
+        id: "TT001",
+        class_name: "Grade 10A",
+        day: "Monday",
+        time_slot: "08:00 AM - 09:00 AM",
+        subject: "Mathematics",
+        teacher_id: "TCH001"
+      },
+      {
+        id: "TT002",
+        class_name: "Grade 10A",
+        day: "Monday",
+        time_slot: "09:00 AM - 10:00 AM",
+        subject: "History",
+        teacher_id: "TCH002"
+      },
+      {
+        id: "TT003",
+        class_name: "Grade 10B",
+        day: "Tuesday",
+        time_slot: "08:00 AM - 09:00 AM",
+        subject: "Physics",
+        teacher_id: "TCH001"
+      }
+    ],
+    financials: [
+      {
+        id: "FIN001",
+        student_id: "STU001",
+        description: "Term 1 Tuition Fee",
+        amount_billed: 1500,
+        amount_paid: 1500,
+        term: "Term 1",
+        academic_year: "2026-2027",
+        created_at: new Date().toISOString()
+      },
+      {
+        id: "FIN002",
+        student_id: "STU001",
+        description: "Extracurricular Activity Fee",
+        amount_billed: 200,
+        amount_paid: 100,
+        term: "Term 1",
+        academic_year: "2026-2027",
+        created_at: new Date().toISOString()
+      }
+    ],
+    results: [
+      {
+        id: "RES001",
+        student_id: "STU001",
+        teacher_id: "TCH001",
+        subject: "Mathematics",
+        term: "Term 1",
+        academic_year: "2026-2027",
+        exam_score: 55,
+        project_score: 18,
+        group_score: 9,
+        assignment_score: 9,
+        total_score: 91,
+        grade: "A",
+        remarks: "Outstanding academic performance",
+        created_at: new Date().toISOString()
+      }
+    ],
+    attendance: [
+      {
+        id: "ATT001",
+        student_id: "STU001",
+        type: "morning",
+        subject: "General Assembly",
+        teacher_id: "TCH001",
+        is_present: true,
+        date: new Date().toISOString().split("T")[0],
+        created_at: new Date().toISOString()
+      }
+    ],
+    assignments: [
+      {
+        id: "ASG001",
+        teacher_id: "TCH001",
+        title: "Algebra & Linear Equations Worksheet 1",
+        class_name: "Grade 10A",
+        subject: "Mathematics",
+        due_date: new Date(Date.now() + 7 * 86400000).toISOString(),
+        external_link: "",
+        created_at: new Date().toISOString()
+      }
+    ]
+  };
+
+  const logBox = document.getElementById("logBox");
+  const progressBar = document.getElementById("progressBar");
+  const startBtn = document.getElementById("startBtn");
+  const statusText = document.getElementById("statusText");
+
+  function log(msg, type = "info") {
+    const el = document.createElement("div");
+    el.className = `log-entry log-${type}`;
+    el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    logBox.appendChild(el);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  window.runMigration = async function() {
+    startBtn.disabled = true;
+    startBtn.textContent = "Migrating...";
+    log("Connecting to Firebase Cloud Firestore...", "info");
+
+    let totalDocs = 0;
+    for (const col in dataPayload) {
+      totalDocs += dataPayload[col].length;
+    }
+
+    let completed = 0;
+
+    try {
+      for (const [collectionName, records] of Object.entries(dataPayload)) {
+        log(`Migrating collection: '${collectionName}' (${records.length} documents)...`, "info");
+        for (const record of records) {
+          const docId = record.id || `doc_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+          const docRef = doc(db, collectionName, docId);
+          await setDoc(docRef, record, { merge: true });
+          completed++;
+          progressBar.style.width = `${Math.round((completed / totalDocs) * 100)}%`;
+          log(`  ✓ Written ${collectionName}/${docId}`, "success");
+        }
+      }
+
+      log("🎉 All database collections successfully uploaded to Firebase Firestore!", "success");
+      statusText.innerHTML = `<strong style="color:#4ade80;">Migration Complete (${completed}/${totalDocs} documents written)</strong>`;
+      startBtn.textContent = "Migration Completed";
+    } catch (err) {
+      console.error(err);
+      log(`❌ Migration error: ${err.message}`, "error");
+      if (err.message.includes("permission-denied") || err.code === "permission-denied") {
+        log("💡 Firestore Security Rules note: Make sure Cloud Firestore is created and rules allow writes in your Firebase Console (test mode or authenticated rules).", "warn");
+      }
+      startBtn.disabled = false;
+      startBtn.textContent = "Retry Migration";
+      statusText.innerHTML = `<strong style="color:#f87171;">Migration Failed: ${err.message}</strong>`;
+    }
+  };
+</script>
+</body>
+</html>
