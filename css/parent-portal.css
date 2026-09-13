@@ -442,3 +442,140 @@
     min-height: 78px;
   }
 }
+
+/* Parent portal non-dashboard page responsiveness */
+@media (max-width: 1024px) {
+  body.dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+
+  body.dashboard-layout > .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: min(280px, 86vw);
+    height: 100vh;
+    transform: translateX(-105%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+
+  body.dashboard-layout > .sidebar.active {
+    transform: translateX(0);
+  }
+
+  body.dashboard-layout main .p-8 {
+    padding: 1.25rem;
+  }
+
+  body.dashboard-layout main .glass-panel,
+  body.dashboard-layout main .card {
+    max-width: 100%;
+  }
+
+  body.dashboard-layout main .summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  body.dashboard-layout main .summary-grid .card-1,
+  body.dashboard-layout main .summary-grid .card-2,
+  body.dashboard-layout main .summary-grid .card-3 {
+    grid-column: span 1;
+  }
+
+  body.dashboard-layout main table {
+    min-width: 420px;
+  }
+
+  body.dashboard-layout main .overflow-x-auto,
+  body.dashboard-layout main section[style*='overflow-x: auto'] {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  body.dashboard-layout {
+    display: block;
+  }
+
+  body.dashboard-layout main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  body.dashboard-layout .mobile-top-bar {
+    display: flex;
+  }
+
+  body.dashboard-layout main .p-8 {
+    padding: 1rem;
+  }
+
+  body.dashboard-layout main header {
+    margin-bottom: 1rem;
+  }
+
+  body.dashboard-layout main header h1,
+  body.dashboard-layout main h1.text-2xl {
+    font-size: 1.5rem;
+    line-height: 1.25;
+  }
+
+  body.dashboard-layout main .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.dashboard-layout main .summary-grid .card-1,
+  body.dashboard-layout main .summary-grid .card-2,
+  body.dashboard-layout main .summary-grid .card-3 {
+    grid-column: span 1;
+  }
+
+  body.dashboard-layout main .glass-panel,
+  body.dashboard-layout main .card {
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+  }
+
+  body.dashboard-layout main .flex,
+  body.dashboard-layout main .flex-wrap {
+    flex-wrap: wrap;
+  }
+
+  body.dashboard-layout main .tab-btn {
+    width: 100%;
+    margin: 0 0 0.5rem 0;
+  }
+
+  body.dashboard-layout main .max-w-4xl,
+  body.dashboard-layout main .max-w-5xl,
+  body.dashboard-layout main .max-w-6xl {
+    max-width: 100%;
+  }
+
+  body.dashboard-layout main table {
+    display: block;
+    width: 100%;
+    min-width: 320px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  body.dashboard-layout main .form-group,
+  body.dashboard-layout main .form-control,
+  body.dashboard-layout main .filter-select,
+  body.dashboard-layout main .btn {
+    width: 100%;
+  }
+
+  body.dashboard-layout main .btn {
+    min-height: 44px;
+  }
+
+  body.dashboard-layout main .ledger-table,
+  body.dashboard-layout main .data-table {
+    min-width: 280px;
+  }
+}
