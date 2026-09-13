@@ -8,25 +8,24 @@ class ApiClient {
     static async request(endpoint, payload) {
         const action = payload ? payload.action : null;
 
-        // Try direct Firebase Firestore first if available
+        // Firebase-first only when the Firestore bridge is present.
         if (window.FirebaseDB && action) {
             try {
                 const fbResult = await ApiClient.executeFirebaseAction(action, payload);
                 if (fbResult !== undefined) {
                     return { status: 'success', ...fbResult };
                 }
+                throw new Error(`FirebaseDB has no implementation for action '${action}'.`);
             } catch (fbError) {
                 console.warn(`[Firebase Firestore] Action '${action}' note:`, fbError.message);
-                // If it was a deliberate validation/user error, throw it
                 if (fbError.message && (fbError.message.includes("Invalid") || fbError.message.includes("mismatch"))) {
                     showToast(fbError.message, 'error');
-                    throw fbError;
                 }
-                // Otherwise continue to PHP fallback
+                throw fbError;
             }
         }
 
-        // Standard PHP REST Backend
+        // Standard PHP REST Backend only used when Firestore bridge is not present.
         try {
             const response = await fetch(`${API_BASE}/${endpoint}`, {
                 method: 'POST',
@@ -110,6 +109,8 @@ class ApiClient {
             // Financials
             case 'get_financials':
                 return { data: await fb.getFinancials(data.studentId) };
+            case 'get_all_financials':
+                return { data: await fb.getAllFinancials() };
             case 'add_financial':
                 return await fb.addFinancial(data);
             case 'delete_financial':
@@ -125,6 +126,8 @@ class ApiClient {
                 return { data: await fb.getStudentResults(data.studentId, data.term, data.academic_year) };
             case 'get_all_results':
                 return { data: await fb.getAllResults(data.term, data.academic_year) };
+            case 'get_result_periods':
+                return { data: await fb.getResultPeriods() };
 
             // Attendance & Rosters
             case 'get_classes':
@@ -181,6 +184,16 @@ class ApiClient {
                 return { data: await fb.getRecommendedPromotions() };
             case 'approve_promotion':
                 await fb.approvePromotion(data.studentId, data.nextClass || "Promoted");
+                return {};
+
+            // Notifications
+            case 'get_notifications':
+                return { data: await fb.getNotifications(data.userId) };
+            case 'mark_read':
+                await fb.markNotificationRead(data.id, data.userId);
+                return {};
+            case 'mark_all_read':
+                await fb.markAllNotificationsRead(data.userId);
                 return {};
 
             default:

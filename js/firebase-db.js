@@ -191,6 +191,29 @@ export class FirebaseDB {
     await deleteDoc(doc(db, "users", id));
   }
 
+  // ── Notification helpers ───────────────────────────────────────
+  static async getNotifications(userId) {
+    const q = query(collection(db, "notifications"), where("user_id", "==", userId));
+    const snap = await getDocs(q);
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    return list;
+  }
+
+  static async markNotificationRead(id, userId) {
+    const ref = doc(db, "notifications", id);
+    await updateDoc(ref, { is_read: 1, updated_at: new Date().toISOString() });
+  }
+
+  static async markAllNotificationsRead(userId) {
+    const q = query(collection(db, "notifications"), where("user_id", "==", userId));
+    const snap = await getDocs(q);
+    for (const d of snap.docs) {
+      await updateDoc(doc(db, "notifications", d.id), { is_read: 1, updated_at: new Date().toISOString() });
+    }
+    return { updated: snap.size };
+  }
+
   // ── 6. TIMETABLES ─────────────────────────────────────────────
   static async getAllTimetables() {
     const snap = await getDocs(collection(db, "timetables"));
@@ -261,6 +284,29 @@ export class FirebaseDB {
   }
 
   // ── 7. FINANCIALS ─────────────────────────────────────────────
+  static async getAllFinancials() {
+    const snap = await getDocs(collection(db, "financials"));
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    const studentMap = {};
+    const studentsSnap = await getDocs(collection(db, "students"));
+    studentsSnap.forEach(d => {
+      const s = d.data();
+      studentMap[s.id] = { name: s.name, class_name: s.class_name };
+    });
+
+    return list
+      .map(f => {
+        const student = studentMap[f.student_id] || { name: "Unknown", class_name: "Unknown" };
+        return {
+          ...f,
+          student_name: student.name,
+          class_name: student.class_name
+        };
+      })
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  }
+
   static async getFinancials(studentId) {
     const q = query(collection(db, "financials"), where("student_id", "==", studentId), orderBy("created_at", "desc"));
     try {
@@ -297,6 +343,20 @@ export class FirebaseDB {
   }
 
   // ── 8. RESULTS ────────────────────────────────────────────────
+  static async getResultPeriods() {
+    const snap = await getDocs(collection(db, "results"));
+    const map = new Map();
+    snap.docs.forEach(d => {
+      const r = d.data();
+      if (!r.term || !r.academic_year) return;
+      const key = `${r.term}::${r.academic_year}`;
+      if (!map.has(key)) {
+        map.set(key, { term: r.term, academic_year: r.academic_year });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.academic_year.localeCompare(a.academic_year));
+  }
+
   static async submitResults({ teacherId, subject, term, academic_year, records }) {
     let saved = 0;
     for (const rec of records) {

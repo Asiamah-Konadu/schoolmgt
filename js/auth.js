@@ -38,7 +38,17 @@ document.addEventListener('click', (e) => {
 // Authentication Class
 class Auth {
     static async login(idOrEmail, password, roleType) {
-        // Try Firebase direct login first if available
+        const base = Auth.getBasePath();
+
+        if (!window.FirebaseDB) {
+            try {
+                const module = await import(base + 'js/firebase-db.js');
+                window.FirebaseDB = module.FirebaseDB;
+            } catch (e) {
+                console.warn('[Auth Firebase] Firestore bridge unavailable:', e.message);
+            }
+        }
+
         if (window.FirebaseDB) {
             try {
                 const user = await window.FirebaseDB.login(idOrEmail, password, roleType);
@@ -53,9 +63,11 @@ class Auth {
                     return null;
                 }
             }
+            // If Firebase bridge is present but authentication fails, do not silently fall back to PHP.
+            return null;
         }
 
-        // Fallback to PHP Backend
+        // Fallback to PHP Backend only when the Firebase bridge is truly unavailable.
         try {
             const data = await ApiClient.request('auth.php', {
                 action: 'login',
