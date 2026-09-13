@@ -200,6 +200,22 @@ export class FirebaseDB {
     return list;
   }
 
+  static async sendPushPhoneNotification({ userId, title, body, type = 'phone_push' }) {
+    const id = 'PUSH_' + Math.floor(100000 + Math.random() * 900000);
+    const payload = {
+      id,
+      user_id: userId,
+      title: title || 'School update',
+      body: body || 'You have a new update from Kings Academy.',
+      type,
+      is_read: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    await setDoc(doc(db, 'notifications', id), payload);
+    return { id, status: 'queued', notification: payload };
+  }
+
   static async markNotificationRead(id, userId) {
     const ref = doc(db, "notifications", id);
     await updateDoc(ref, { is_read: 1, updated_at: new Date().toISOString() });

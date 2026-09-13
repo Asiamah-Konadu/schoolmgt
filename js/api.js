@@ -219,6 +219,8 @@ class ApiClient {
             case 'mark_all_read':
                 await fb.markAllNotificationsRead(data.userId);
                 return {};
+            case 'send_push_phone_notification':
+                return await fb.sendPushPhoneNotification(data);
 
             default:
                 return undefined;

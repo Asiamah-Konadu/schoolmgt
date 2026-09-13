@@ -157,6 +157,30 @@ elseif ($action === 'mark_message_read') {
     }
 }
 
+elseif ($action === 'send_push_phone_notification') {
+    try {
+        $userId = $data->userId ?? '';
+        $title = trim($data->title ?? 'School update');
+        $body = trim($data->body ?? 'You have a new update from Kings Academy.');
+        $type = trim($data->type ?? 'phone_push');
+        $id = 'PUSH_' . mt_rand(100000, 999999);
+
+        $stmt = $pdo->prepare("INSERT INTO notifications (id, user_id, title, body, type, is_read, created_at, updated_at)
+            VALUES (:id, :user_id, :title, :body, :type, 0, NOW(), NOW())");
+        $stmt->execute([
+            ':id' => $id,
+            ':user_id' => $userId,
+            ':title' => $title,
+            ':body' => $body,
+            ':type' => $type
+        ]);
+
+        echo json_encode(["status" => "success", "id" => $id, "queued" => true]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
+
 else {
     echo json_encode(["status" => "error", "message" => "Invalid action"]);
 }
