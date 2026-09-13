@@ -5,11 +5,35 @@ const API_BASE = window.location.pathname.includes('/teacher/') ||
                  window.location.pathname.includes('/management/') ? '../api' : 'api';
 
 class ApiClient {
+    static getBasePath() {
+        const isSubdir = window.location.pathname.includes('/teacher/') ||
+                         window.location.pathname.includes('/parent/') ||
+                         window.location.pathname.includes('/management/');
+        return isSubdir ? '../' : '';
+    }
+
+    static async ensureFirebaseBridge() {
+        if (window.FirebaseDB) {
+            return window.FirebaseDB;
+        }
+
+        try {
+            const module = await import(ApiClient.getBasePath() + 'js/firebase-db.js');
+            window.FirebaseDB = module.FirebaseDB;
+            console.log('[Firebase DB] Direct Firestore database connection activated lazily.');
+            return window.FirebaseDB;
+        } catch (err) {
+            console.log('[Database] Running with standard REST API mode.');
+            return undefined;
+        }
+    }
+
     static async request(endpoint, payload) {
         const action = payload ? payload.action : null;
 
-        // Firebase-first only when the Firestore bridge is present.
-        if (window.FirebaseDB && action) {
+        // Import-or-use the Firestore bridge lazily, then route the action through it.
+        const fb = await ApiClient.ensureFirebaseBridge();
+        if (fb && action) {
             try {
                 const fbResult = await ApiClient.executeFirebaseAction(action, payload);
                 if (fbResult !== undefined) {
