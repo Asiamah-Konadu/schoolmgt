@@ -76,6 +76,17 @@ try {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
 
+    $pdo->exec("CREATE TABLE IF NOT EXISTS parent_devices (
+        id VARCHAR(50) PRIMARY KEY,
+        user_id VARCHAR(50) NOT NULL,
+        token VARCHAR(255) NOT NULL UNIQUE,
+        platform VARCHAR(50) DEFAULT 'web',
+        device_name VARCHAR(100) DEFAULT 'browser',
+        is_active TINYINT(1) DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
 } catch (PDOException $e) {
     http_response_code(500);
     echo json_encode([

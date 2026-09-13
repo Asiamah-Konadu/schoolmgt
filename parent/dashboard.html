@@ -94,11 +94,47 @@
         </section>
     </main>
 
+    <link rel="manifest" href="../manifest.json">
     <script type="module" src="../js/firebase-db.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/parent-nav.js"></script>
+    <script type="module">
+        import { getToken } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js';
+        import { messaging } from '../js/firebase-config.js';
+
+        window.registerParentFcmToken = async function registerParentFcmToken() {
+            const user = Auth.getCurrentUser();
+            if (!user || !('serviceWorker' in navigator)) return;
+
+            try {
+                const registration = await navigator.serviceWorker.register('../firebase-messaging-sw.js');
+                const token = await getToken(messaging, {
+                    vapidKey: 'YOUR_PUBLIC_VAPID_KEY',
+                    serviceWorkerRegistration: registration
+                });
+
+                if (!token) return;
+
+                await ApiClient.request('parent.php', {
+                    action: 'save_parent_fcm_token',
+                    userId: user.id,
+                    token,
+                    platform: 'web',
+                    deviceName: navigator.userAgent || 'browser'
+                });
+            } catch (err) {
+                console.warn('[parent-fcm]', err.message || err);
+            }
+        };
+    </script>
     <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js').catch(() => {});
+            });
+        }
+
         Auth.requireAuth(['parent']);
 
         async function loadDashboard(student) {
@@ -168,43 +204,64 @@
         };
 
         document.getElementById('pushPhoneButton')?.addEventListener('click', async () => {
-            if (!('Notification' in window)) {
-                showToast('This browser does not support phone push notifications.', 'error');
+            const user = Auth.getCurrentUser();
+            if (!user) {
+                showToast('Please sign in again.', 'error');
                 return;
             }
 
-            if (Notification.permission === 'denied') {
-                showToast('Phone push notifications are blocked in this browser.', 'error');
-                return;
-            }
-
-            if (Notification.permission === 'default') {
-                const result = await Notification.requestPermission();
-                if (result !== 'granted') {
-                    showToast('Phone push permission was not granted.', 'error');
+            try {
+                const notificationPermission = 'Notification' in window ? Notification.permission : 'unsupported';
+                if (notificationPermission === 'default') {
+                    const permission = await Notification.requestPermission();
+                    if (permission !== 'granted') {
+                        showToast('Phone permission was not granted.', 'error');
+                        return;
+                    }
+                }
+                if (notificationPermission === 'denied') {
+                    showToast('Phone notifications are blocked in this browser.', 'error');
                     return;
                 }
-            }
 
-            const user = Auth.getCurrentUser();
-            try {
-                await ApiClient.request('parent.php', {
+                // Register the browser token if messaging support is available. The API call falls back
+                // to the server-side route that writes the notification log and attempts FCM.
+                try {
+                    await window.registerParentFcmToken?.();
+                } catch (err) {
+                    console.warn('[parent-fcm-registration]', err);
+                }
+
+                const response = await ApiClient.request('parent.php', {
                     action: 'send_push_phone_notification',
-                    userId: user?.id,
+                    userId: user.id,
                     title: 'School update',
                     body: 'A new update is available in your parent portal.',
                     type: 'phone_push'
                 });
 
-                const active = JSON.parse(localStorage.getItem('parentActiveStudent') || '{}');
-                const note = new Notification('Kings Academy', {
-                    body: `${active.name || 'Your child'} has a new update ready in the portal.`,
-                    icon: '../css/logo.png'
-                });
-                setTimeout(() => note.close(), 3200);
-                showToast('Phone push notification created.', 'success');
+                if (response?.status === 'success' || response?.queued === true) {
+                    const active = JSON.parse(localStorage.getItem('parentActiveStudent') || '{}');
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        const note = new Notification('Kings Academy', {
+                            body: `${active.name || 'Your child'} has a new update ready in the portal.`,
+                            icon: '../icons/app-icon.svg'
+                        });
+                        setTimeout(() => note.close(), 3200);
+                    }
+
+                    const transport = response?.transport || 'local_only';
+                    if (transport === 'fcm') {
+                        showToast('Phone push sent through FCM.', 'success');
+                    } else {
+                        showToast('Phone push saved locally. Add a real SMS or FCM server key for production delivery.', 'warning');
+                    }
+                } else {
+                    showToast('Unable to create Push to phone notification.', 'error');
+                }
             } catch (err) {
-                showToast('Unable to create phone push notification.', 'error');
+                console.error('[push-phone]', err);
+                showToast('Unable to create Push to phone notification.', 'error');
             }
         });
     </script>

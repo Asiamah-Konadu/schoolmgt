@@ -31,6 +31,38 @@ class ApiClient {
     static async request(endpoint, payload) {
         const action = payload ? payload.action : null;
 
+        // Parent phone push and token registration must stay on the real PHP parent notifications API.
+        if (action === 'send_push_phone_notification' || action === 'save_parent_fcm_token') {
+            try {
+                const response = await fetch(`${API_BASE}/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    throw new Error(`Server returned invalid JSON (Status: ${response.status})`);
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                }
+
+                if (data.status === 'error') {
+                    throw new Error(data.message || 'API Error');
+                }
+
+                return data;
+            } catch (error) {
+                console.error('API Request failed:', error);
+                showToast(error.message, 'error');
+                throw error;
+            }
+        }
+
         // Import-or-use the Firestore bridge lazily, then route the action through it.
         const fb = await ApiClient.ensureFirebaseBridge();
         if (fb && action) {
@@ -58,7 +90,7 @@ class ApiClient {
                 },
                 body: JSON.stringify(payload)
             });
-            
+
             let data;
             try {
                 data = await response.json();
@@ -69,11 +101,11 @@ class ApiClient {
             if (!response.ok) {
                 throw new Error(data.message || `HTTP error! status: ${response.status}`);
             }
-            
+
             if (data.status === 'error') {
                 throw new Error(data.message || 'API Error');
             }
-            
+
             return data;
         } catch (error) {
             console.error('API Request failed:', error);
@@ -219,8 +251,6 @@ class ApiClient {
             case 'mark_all_read':
                 await fb.markAllNotificationsRead(data.userId);
                 return {};
-            case 'send_push_phone_notification':
-                return await fb.sendPushPhoneNotification(data);
 
             default:
                 return undefined;

@@ -5,6 +5,7 @@ import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/10
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+import { getMessaging } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 
 // Web app's Firebase configuration
 export const firebaseConfig = {
@@ -32,5 +33,6 @@ isSupported().then((supported) => {
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+export const messaging = getMessaging(app);
 
 export default app;
